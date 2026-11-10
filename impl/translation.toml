@@ -1,0 +1,30 @@
+# Translation configuration for `impl/` (`rust-obj2lean`, from the pinned
+# `third_party/code-verification` submodule).
+#
+# Extracts the relocatable AArch64 objects of the thin wrapper crate `chachapoly-verified` and of
+# the RustCrypto crates it instantiates, as a layout-generic multi-block placed library, and ties
+# it to the stock-linked, SHA-256-pinned executable `chachapoly_cli.elf`.
+
+crates = ["chachapoly-verified", "poly1305"]
+target = "aarch64-unknown-linux-musl"
+obj_name = "chachapoly"
+obj_file = "ChaChaPoly/Generated/ChachapolyObj.lean"
+namespace_prefix = "ChaChaPoly"
+page_separate_data = true
+hashed_inputs = ["Cargo.toml", "Cargo.lock", ".cargo/config.toml", "src/lib.rs", "src/main.rs"]
+license_header = [
+    "Machine code in this file is compiled from the RustCrypto crates `chacha20poly1305` v0.10.1,",
+    "`chacha20` v0.9.1, `poly1305` v0.8.0 and their dependencies (pinned by `impl/Cargo.lock`),",
+    "via the thin wrapper crate `impl/`. It is therefore a derived work of those crates:",
+    "",
+    "  Copyright (c) RustCrypto Developers.",
+    "  SPDX-License-Identifier: Apache-2.0 OR MIT",
+]
+
+[placed]
+placed_only = true
+multi = true
+exports = ["chachapoly_encrypt", "chachapoly_decrypt"]
+elf = "chachapoly_cli.elf"
+elf_sha256 = "bc2586b4f00fbb21366019035f2fd95edc3c4274e0c460426006ec364566ceaa"
+linked = true

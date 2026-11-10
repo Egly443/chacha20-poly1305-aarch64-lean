@@ -1,0 +1,28 @@
+[package]
+name = "chachapoly-verified"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "Apache-2.0"
+
+[lib]
+name = "chachapoly_verified"
+path = "src/lib.rs"
+crate-type = ["rlib"]
+
+[[bin]]
+name = "chachapoly-cli"
+path = "src/main.rs"
+
+[dependencies]
+# RustCrypto IETF ChaCha20-Poly1305 (RFC 8439). Exact versions and crates.io checksums of this
+# crate and of every transitive dependency are pinned by `Cargo.lock` (builds use `--locked`).
+chacha20poly1305 = { version = "=0.10.1", default-features = false }
+
+[profile.release]
+opt-level = 2
+lto = false
+codegen-units = 1
+panic = "abort"
+debug = false
+overflow-checks = false

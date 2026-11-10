@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# Reproducible stock build of `impl/chachapoly_cli.elf`, the static AArch64 Linux (musl) ELF whose
+# machine code is verified in Lean. Modelled on `scripts/cli-elf-stock` of the pinned
+# `third_party/code-verification` submodule: a scrubbed environment, pinned toolchain, locked
+# dependencies, host-path remapping, and a fail-closed SHA-256 pin.
+#
+#   scripts/build-elf --build        rebuild impl/chachapoly_cli.elf from the pinned sources
+#   scripts/build-elf --verify-pin   check impl/chachapoly_cli.elf against impl/chachapoly_cli.elf.sha256
+#   scripts/build-elf --check        rebuild into a temporary directory and compare with the pin
+#   scripts/build-elf --pin          (maintainers) rewrite the pin files from the current ELF
+#
+# Toolchain: stock `rustc`/`cargo` 1.98.1 (the version `third_party/code-verification` pins for
+# the Signal proofs) and the LLVM `ld.lld` that ships with it (`rust-lld`, selected in
+# `impl/.cargo/config.toml`). Target `aarch64-unknown-linux-musl`, linked against the
+# toolchain's bundled, unmodified musl `libc.a` and `crt1.o`.
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+IMPL="$REPO/impl"
+ELF="$IMPL/chachapoly_cli.elf"
+PIN="$IMPL/chachapoly_cli.elf.sha256"
+TOOLCHAIN="1.98.1"
+TARGET="aarch64-unknown-linux-musl"
+
+sha() { sha256sum "$1" | cut -d' ' -f1; }
+
+build_into() {
+  local out="$1" target_dir
+  target_dir="$(mktemp -d)"
+  local cargo_home="${CARGO_HOME:-$HOME/.cargo}"
+  local sysroot commit
+  sysroot="$(rustc "+$TOOLCHAIN" --print sysroot)"
+  commit="$(rustc "+$TOOLCHAIN" -vV | sed -n 's/^commit-hash: //p')"
+  # Same code generation flags and `--remap-path-prefix` table as `rust-obj2lean`
+  # (`DETERMINISTIC_CODEGEN_FLAGS` + "Reproducible paths" in its README), so that the linked
+  # executable contains exactly the object code that is extracted into Lean and no host path.
+  local flags="-C codegen-units=1 -C relocation-model=static -C target-cpu=generic"
+  flags+=" -C no-vectorize-slp -C no-vectorize-loops"
+  flags+=" --remap-path-prefix=$cargo_home/registry/src=/cargo-registry"
+  flags+=" --remap-path-prefix=$target_dir=/cargo-target"
+  flags+=" --remap-path-prefix=$cargo_home/git/checkouts=/cargo-git"
+  flags+=" --remap-path-prefix=$sysroot/lib/rustlib/src/rust=/rustc/$commit"
+  ( cd "$IMPL" && env -i PATH="$PATH" HOME="$HOME" CARGO_HOME="$cargo_home" \
+      ${RUSTUP_HOME:+RUSTUP_HOME="$RUSTUP_HOME"} ${HTTPS_PROXY:+HTTPS_PROXY="$HTTPS_PROXY"} \
+      ${SSL_CERT_FILE:+SSL_CERT_FILE="$SSL_CERT_FILE"} ${CARGO_HTTP_CAINFO:+CARGO_HTTP_CAINFO="$CARGO_HTTP_CAINFO"} \
+      LC_ALL=C TZ=UTC SOURCE_DATE_EPOCH=0 \
+      RUSTFLAGS="$flags" CARGO_TARGET_DIR="$target_dir" \
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 CARGO_PROFILE_RELEASE_PANIC=abort CARGO_PROFILE_RELEASE_LTO=off \
+      cargo "+$TOOLCHAIN" build --release --locked --target "$TARGET" >&2 )
+  cp "$target_dir/$TARGET/release/chachapoly-cli" "$out"
+  rm -rf "$target_dir"
+  if grep -aqF -e "$cargo_home" -e "$REPO" "$out"; then
+    echo "error: host path leaked into $out" >&2; exit 1
+  fi
+}
+
+verify_pin() {
+  local want got
+  want="$(cut -d' ' -f1 "$PIN")"; got="$(sha "$1")"
+  if [ "$want" != "$got" ]; then
+    echo "error: SHA-256 mismatch for $1" >&2
+    echo "  pinned: $want" >&2; echo "  actual: $got" >&2; exit 1
+  fi
+  # The same digest must be the one the Lean development is generated against.
+  grep -qF "elf_sha256 = \"$want\"" "$IMPL/translation.toml" \
+    || { echo "error: impl/translation.toml does not pin $want" >&2; exit 1; }
+  echo "ok: $(basename "$1") sha256 $got"
+}
+
+case "${1:-}" in
+  --build) build_into "$ELF"; echo "built $ELF"; echo "sha256 $(sha "$ELF")" ;;
+  --verify-pin) verify_pin "$ELF" ;;
+  --check) tmp="$(mktemp)"; build_into "$tmp"; verify_pin "$tmp"; rm -f "$tmp" ;;
+  --pin)
+    h="$(sha "$ELF")"; echo "$h  chachapoly_cli.elf" > "$PIN"
+    sed -i "s/^elf_sha256 = \".*\"/elf_sha256 = \"$h\"/" "$IMPL/translation.toml"
+    echo "pinned $h" ;;
+  *) sed -n '2,15p' "${BASH_SOURCE[0]}"; exit 2 ;;
+esac
