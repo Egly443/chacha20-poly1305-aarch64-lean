@@ -45,6 +45,17 @@ theorem chacha20_block_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Place
       (chachapolyLib.withCodeLoaded mpl chachaBlockSpec) :=
   sorry
 
+set_option maxRecDepth 200000 in
+/-- **Poly1305 block step (machine code).** For every placement of the library, the AArch64
+    code of RustCrypto's `State::compute_block` (called with `partial = false`) satisfies
+    `polyBlockContract`: the accumulator becomes `(acc + block ‖ 0x01) * r mod 2^130 - 5`,
+    one iteration of `polyBlocks` of RFC 8439 §2.5.1. No hooks. -/
+theorem poly1305_block_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Placeable mpl) :
+    subroutine_ok (chachapolyLib.blockProgram mpl 7)
+      (chachapolyLib.fnAddr mpl polyComputeBlockSym)
+      (chachapolyLib.withCodeLoaded mpl polyBlockContract) :=
+  sorry
+
 /-- **Round trip (model).** RFC 8439 decryption inverts encryption on all inputs. -/
 theorem aead_roundtrip (key nonce aad pt : Bytes) :
     aeadDecrypt key nonce aad (aeadEncrypt key nonce aad pt).1 (aeadEncrypt key nonce aad pt).2 =

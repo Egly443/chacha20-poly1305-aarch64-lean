@@ -1,7 +1,7 @@
 module
 
 public import ProofLib
-public import ChaChaPoly.Spec.RFC8439
+public import ChaChaPoly.Spec.Contracts
 
 /-!
 # Poly1305 in five 26-bit limbs: the arithmetic behind `State::compute_block`
@@ -19,10 +19,6 @@ set_option linter.unusedSimpArgs false
 namespace ChaChaPoly.Proofs
 
 open ChaChaPoly.Spec Arm64 ProofLib
-
-/-- The value of five 26-bit limbs. -/
-def limbVal (h0 h1 h2 h3 h4 : Nat) : Nat :=
-  h0 + 2 ^ 26 * h1 + 2 ^ 52 * h2 + 2 ^ 78 * h3 + 2 ^ 104 * h4
 
 /-! ## Width bookkeeping -/
 

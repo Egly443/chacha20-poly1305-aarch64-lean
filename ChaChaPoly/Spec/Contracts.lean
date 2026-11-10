@@ -49,4 +49,55 @@ def chachaBlockSpec : Spec (BitVec 64 × BitVec 64 × State × State) where
     stateAt st { s with x12 := s.x12 + 1 } ∗
     stateAt out ((iter doubleRound 10 s).add s) ∗ stackFrame s0 0x90
 
+/-! ## Poly1305 accumulator in five 26-bit limbs -/
+
+/-- The value of five 26-bit limbs. -/
+def limbVal (h0 h1 h2 h3 h4 : Nat) : Nat :=
+  h0 + 2 ^ 26 * h1 + 2 ^ 52 * h2 + 2 ^ 78 * h3 + 2 ^ 104 * h4
+
+/-- Five 32-bit limbs at `p`. -/
+def limbsAt (p : BitVec 64) (l0 l1 l2 l3 l4 : BitVec 32) : SepProp :=
+  (p ↦₃₂ l0) ∗ ((p + 4#64) ↦₃₂ l1) ∗ ((p + 8#64) ↦₃₂ l2) ∗ ((p + 12#64) ↦₃₂ l3) ∗
+  ((p + 16#64) ↦₃₂ l4)
+
+/-- The ten limbs of RustCrypto's `poly1305::backend::soft::State`: multiplier `r`, accumulator `h`. -/
+structure PolyLimbs where
+  (r0 r1 r2 r3 r4 h0 h1 h2 h3 h4 : BitVec 32)
+
+/-- The limbs `l` represent multiplier `r` and an accumulator congruent to `acc` modulo
+    `2^130 - 5`: the `r` limbs are below `2^26` and have value `r`; the `h` limbs are below
+    `2^26` (`h1`: below `2^26 + 64`, it absorbs the last carry) and have value `≡ acc`. -/
+def PolyLimbs.Rep (l : PolyLimbs) (r acc : Nat) : Prop :=
+  (l.r0.toNat < 2 ^ 26 ∧ l.r1.toNat < 2 ^ 26 ∧ l.r2.toNat < 2 ^ 26 ∧ l.r3.toNat < 2 ^ 26 ∧
+    l.r4.toNat < 2 ^ 26) ∧
+  limbVal l.r0.toNat l.r1.toNat l.r2.toNat l.r3.toNat l.r4.toNat = r ∧
+  (l.h0.toNat < 2 ^ 26 ∧ l.h1.toNat < 2 ^ 26 + 64 ∧ l.h2.toNat < 2 ^ 26 ∧ l.h3.toNat < 2 ^ 26 ∧
+    l.h4.toNat < 2 ^ 26) ∧
+  limbVal l.h0.toNat l.h1.toNat l.h2.toNat l.h3.toNat l.h4.toNat % p1305 = acc % p1305
+
+/-- The `r` and `h` fields of a Poly1305 state at `st` (offsets `0x10` and `0x24`), holding `l`. -/
+def polyLimbsAt (st : BitVec 64) (l : PolyLimbs) : SepProp :=
+  limbsAt (st + 16#64) l.r0 l.r1 l.r2 l.r3 l.r4 ∗ limbsAt (st + 36#64) l.h0 l.h1 l.h2 l.h3 l.h4
+
+/-- The demangled name of the Poly1305 block function in the pinned object. -/
+def polyComputeBlockSym : String := "<poly1305::backend::soft::State>::compute_block"
+
+/-- Contract of `poly1305::backend::soft::State::compute_block(&mut self, block, partial = false)`.
+
+    Ghosts: state pointer `st` (`x0`), block pointer `blk` (`x1`), the 16 block bytes `bs`, the
+    multiplier `r` and the accumulator `acc`.
+
+    If the state's limbs represent `(r, acc)`, then afterwards they represent
+    `(r, (acc + leNat (bs ++ [1])) * r mod 2^130 - 5)`: exactly one iteration of `polyBlocks`
+    (RFC 8439 §2.5.1) on a full 16-byte chunk. The block is only read. No stack is used. -/
+def polyBlockContract : Spec (BitVec 64 × BitVec 64 × Bytes × Nat × Nat) where
+  pre := fun (st, blk, bs, r, acc) s0 =>
+    ∃∗ l : PolyLimbs,
+      ⌜(s0.readReg64 .x0 = st ∧ s0.readReg64 .x1 = blk ∧ s0.readReg64 .x2 = 0#64 ∧
+          bs.length = 16) ∧ l.Rep r acc⌝ ∗
+      (blk ↦ₛ bs) ∗ polyLimbsAt st l
+  post := fun (st, blk, bs, r, acc) _ _ =>
+    ∃∗ l : PolyLimbs,
+      ⌜l.Rep r ((acc + leNat (bs ++ [1])) * r % p1305)⌝ ∗ (blk ↦ₛ bs) ∗ polyLimbsAt st l
+
 end ChaChaPoly.Spec

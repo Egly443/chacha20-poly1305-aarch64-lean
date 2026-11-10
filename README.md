@@ -18,6 +18,7 @@ Proved, kernel-checked, no `sorry`, standard axioms only (`scripts/audit`):
 | --- | --- |
 | `chachapoly_linked_in` | The SHA-256-pinned ELF contains the extracted library (all 11 functions reachable from `chachapoly_encrypt` / `chachapoly_decrypt`) at a placement a standard static linker could produce. |
 | `chacha20_block_refines` | For every placement, the machine code of `ChaChaCore::write_keystream_block` (167 instructions) writes `(doubleRound^10 s) + s` and increments the block counter. No hooks. |
+| `poly1305_block_refines` | For every placement, the machine code of Poly1305's `State::compute_block` (74 instructions, `partial = false`) performs one RFC 8439 §2.5.1 step: the accumulator becomes `(acc + block‖0x01) · r mod 2^130 − 5`. No hooks. |
 | `aead_roundtrip` | In the RFC 8439 model, decryption inverts encryption on all inputs. |
 | `aead_is_construction` | The RFC model is the generic §2.8 construction instantiated with the real ChaCha20 / Poly1305. |
 | `aead_integrity` | Symbolic integrity of the construction: under an ideal MAC, any change to the ciphertext or the associated data is rejected. |
@@ -25,8 +26,8 @@ Proved, kernel-checked, no `sorry`, standard axioms only (`scripts/audit`):
 
 Not yet proved:
 
-- Machine-code refinement of the other ten functions: Poly1305 (`Poly1305::new`,
-  `State::compute_block`, `proc_block`, `finalize`), the stream-cipher wrapper
+- Machine-code refinement of the other nine functions: the rest of Poly1305 (`Poly1305::new`,
+  `proc_block`, `finalize`), the stream-cipher wrapper
   (`apply_keystream`), the `Cipher` drop glue, `subtle::black_box`, and the two entry points
   `chachapoly_encrypt` / `chachapoly_decrypt` themselves.
 - Consequently there is **no end-to-end theorem about the entry points yet**, and the symbolic
