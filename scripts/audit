@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Axiom and `sorry` audit of the headline theorems (an independent, lighter check than
+# `comparator/run.sh`).
+#
+# 1. No `sorry`, `admit`, `native_decide`, `bv_decide` or custom `axiom` in the project sources.
+# 2. Every theorem listed in `comparator/chachapoly.json` depends only on `propext`,
+#    `Quot.sound` and `Classical.choice` (checked with `Lean.collectAxioms` on the built
+#    environment).
+# 3. The comparator challenge is in sync with `ChaChaPoly/Theorems/Headline.lean`.
+# 4. The ELF matches its SHA-256 pin.
+set -euo pipefail
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO"
+
+echo "== 1. forbidden constructs"
+if grep -rnE '\b(sorry|admit|native_decide|bv_decide)\b|^\s*axiom\b' \
+    --include='*.lean' ChaChaPoly | grep -vE '^\S+:\s*[0-9]+:\s*(--|/-)|`sorry`|No `native_decide`'; then
+  echo "error: forbidden construct in ChaChaPoly/" >&2; exit 1
+fi
+echo "ok"
+
+echo "== 2. axioms of the headline theorems"
+lake build Theorems > /dev/null
+names="$(python3 -c 'import json; print(" ".join("`"+n for n in json.load(open("comparator/chachapoly.json"))["theorem_names"]))')"
+tmp="$(mktemp --suffix=.lean)"
+trap 'rm -f "$tmp"' EXIT
+cat > "$tmp" <<LEAN
+import ChaChaPoly.Theorems
+open Lean Elab Command in
+run_cmd do
+  let allowed : List Name := [\`propext, \`Quot.sound, \`Classical.choice]
+  for n in ([$(echo "$names" | sed 's/ /, /g')] : List Name) do
+    unless (← getEnv).contains n do throwError "missing theorem {n}"
+    let axs ← Lean.collectAxioms n
+    let bad := axs.toList.filter (fun a => !allowed.contains a)
+    unless bad.isEmpty do throwError "{n} depends on non-standard axioms {bad}"
+    logInfo m!"{n}: {axs.toList}"
+LEAN
+lake env lean "$tmp"
+echo "ok"
+
+echo "== 3. comparator challenge in sync"
+scripts/gen-challenge --check
+
+echo "== 4. ELF pin"
+scripts/build-elf --verify-pin
+echo "audit: PASS"

@@ -1,0 +1,18 @@
+{
+  "challenge_module": "ComparatorChallenge.Headline",
+  "solution_module": "ComparatorSolution",
+  "theorem_names": [
+    "ChaChaPoly.Theorems.chachapoly_linked_in",
+    "ChaChaPoly.Theorems.chacha20_block_refines",
+    "ChaChaPoly.Theorems.aead_roundtrip",
+    "ChaChaPoly.Theorems.aead_is_construction",
+    "ChaChaPoly.Theorems.aead_integrity",
+    "ChaChaPoly.Theorems.ideal_mac_exists"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ],
+  "enable_nanoda": false
+}

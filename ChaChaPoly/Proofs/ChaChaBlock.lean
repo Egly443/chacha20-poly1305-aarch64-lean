@@ -1,7 +1,7 @@
 module
 
 public import ChaChaPoly.Proofs.Code
-public import ChaChaPoly.Spec.RFC8439
+public import ChaChaPoly.Spec.Contracts
 
 /-!
 # The ChaCha20 block function (`write_keystream_block`, block 3)
@@ -288,24 +288,9 @@ theorem SepWP.frame144_close {prog : Program} {t : BitVec 64} {s : Arm64.State} 
     SepWP prog t s P post oom :=
   SepWP.weaken_pre (Entails.trans hf (sepConj_mono_left (frame144_fold b ..))) h
 
-/-- Sixteen little-endian 32-bit words at `p`. -/
-def stateAt (p : BitVec 64) (s : Spec.State) : SepProp :=
-  (p ↦₃₂ s.x0) ∗ ((p + 4#64) ↦₃₂ s.x1) ∗ ((p + 8#64) ↦₃₂ s.x2) ∗ ((p + 12#64) ↦₃₂ s.x3) ∗
-  ((p + 16#64) ↦₃₂ s.x4) ∗ ((p + 20#64) ↦₃₂ s.x5) ∗ ((p + 24#64) ↦₃₂ s.x6) ∗ ((p + 28#64) ↦₃₂ s.x7) ∗
-  ((p + 32#64) ↦₃₂ s.x8) ∗ ((p + 36#64) ↦₃₂ s.x9) ∗ ((p + 40#64) ↦₃₂ s.x10) ∗ ((p + 44#64) ↦₃₂ s.x11) ∗
-  ((p + 48#64) ↦₃₂ s.x12) ∗ ((p + 52#64) ↦₃₂ s.x13) ∗ ((p + 56#64) ↦₃₂ s.x14) ∗ ((p + 60#64) ↦₃₂ s.x15)
-
-def blockSpec : Spec (BitVec 64 × BitVec 64 × Spec.State × Spec.State) where
-  pre := fun (st, out, s, o) s0 =>
-    ⌜s0.readReg64 .x0 = st ∧ s0.readReg64 .x1 = out⌝ ∗
-    stateAt st s ∗ stateAt out o ∗ stackFrame s0 0x90
-  post := fun (st, out, s, _) s0 _ =>
-    stateAt st { s with x12 := s.x12 + 1 } ∗
-    stateAt out ((iter doubleRound 10 s).add s) ∗ stackFrame s0 0x90
-
-theorem block_ok [CpPlacement] :
-    subroutine_ok cpProg3r cpPl3.base (chachapolyLib.withCodeLoaded cpMpl blockSpec) := by
-  dsimp only [MultiPlacedLib.withCodeLoaded, blockSpec, stateAt, cpProg3r, State.add]
+theorem chachaBlock_ok [CpPlacement] :
+    subroutine_ok cpProg3r cpPl3.base (chachapolyLib.withCodeLoaded cpMpl chachaBlockSpec) := by
+  dsimp only [MultiPlacedLib.withCodeLoaded, chachaBlockSpec, stateAt, cpProg3r, State.add]
   wp_entry "<chacha20::ChaChaCore<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B1>, typenum::bit::B0>> as cipher::stream_core::StreamCipherCore>::write_keystream_block" g s0
   refine SepWP.frame144 (s0.sp - 144#64) (by sep_focus) ?_
   intro v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 v16 v17 v18 v19 v20 v21 v22 v23 v24
@@ -346,7 +331,11 @@ theorem block_ok [CpPlacement] :
     have hk_nz : BitVec.ofNat 64 (m' + 1 + 1) ≠ 1#64 := by bv_omega
     wp_steps
     wp_done
-    all_goals trace_state
-    all_goals sorry
+
+/-- Any single block's rebased program is the library's block program. -/
+theorem cpBlockProg_rebase [CpPlacement] (i : Nat) :
+    ((chachapolyLib.blockLib i).program (chachapolyLib.blockPlacement cpMpl i)).rebase
+        (chachapolyLib.blockPlacement cpMpl i).base (fun _ => none) =
+      chachapolyLib.blockProgram cpMpl i := rfl
 
 end ChaChaPoly.Proofs
