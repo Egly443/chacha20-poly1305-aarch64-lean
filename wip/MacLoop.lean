@@ -23,6 +23,25 @@ theorem polyBlocks_nil (r acc : Nat) : polyBlocks r acc [] = acc := by
 
 #print axioms polyBlocks_block
 
+theorem mask16_eq (y : BitVec 64) (h : y.ult 0x8000000000000000#64 = true) :
+    y &&& 0x7ffffffffffffff0#64 = y >>> 4 <<< 4 := by
+  revert h; bv_robdd
+theorem mask16_val (n : Nat) (hn : n < 2 ^ 63) :
+    BitVec.ofNat 64 n &&& 0x7ffffffffffffff0#64 = BitVec.ofNat 64 (16 * (n / 16)) := by
+  rw [mask16_eq _ (by simp [BitVec.ult]; omega)]
+  bv_omega
+theorem polyBlocks_append (r : Nat) : ∀ (j acc : Nat) (X Y : Bytes), X.length = 16 * j →
+    polyBlocks r acc (X ++ Y) = polyBlocks r (polyBlocks r acc X) Y := by
+  intro j
+  induction j with
+  | zero => intro acc X Y h; rw [List.eq_nil_of_length_eq_zero (l := X) (by omega), List.nil_append, polyBlocks_nil]
+  | succ j ih =>
+    intro acc X Y h
+    have hB : (X.take 16).length = 16 := by simp; omega
+    rw [← List.take_append_drop 16 X, List.append_assoc, polyBlocks_block _ _ _ _ hB,
+      polyBlocks_block _ _ _ _ hB]
+    exact ih _ _ _ (by simp; omega)
+
 theorem pb_blk_ok [CpPlacement] :
     subroutine_ok (chachapolyLib.blockProgram cpMpl 9) cpPl9.base
       (chachapolyLib.withCodeLoaded cpMpl polyProcBlockContract) := polyProcBlockContract_ok
@@ -151,7 +170,7 @@ theorem musl_blk_rho [CpPlacement] :
   have h2 : Obj.lookupBlockSym "memcpy" chachapolyLib.blocks = some (11, 0) := by decide +kernel
   simp [cpPl6, MultiPlacedLib.blockPlacement, MultiPlacedLib.resolve, h1, h2]
 
-theorem mask15_val (full t : Nat) (hf16 : full % 16 = 0) (ht : t < 16) (hfull : full + 16 < 2 ^ 63) :
+theorem mask15_val (full t : Nat) (hf16 : full % 16 = 0) (ht : t < 16) (hfull : full + t < 2 ^ 63) :
     BitVec.ofNat 64 (full + t) &&& 15#64 = BitVec.ofNat 64 t := by
   apply BitVec.eq_of_toNat_eq
   rw [BitVec.toNat_and, BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat,
@@ -167,7 +186,7 @@ theorem aadTail_ok [CpPlacement] (F : SepProp) (sm : Arm64.State) (aad scr : Bit
     (h27 : sm.readReg64 .x27 = BitVec.ofNat 64 T.length) (h26 : sm.readReg64 .x26 = BitVec.ofNat 64 full)
     (h21 : sm.readReg64 .x21 = BitVec.ofNat 64 (full + T.length)) (h23 : sm.readReg64 .x23 = aad)
     (h29 : sm.readReg64 .x29 = scr + 0xc0#64)
-    (hT : T.length < 16) (hblk : blk.length = 16) (hf16 : full % 16 = 0) (hfull : full + 16 < 2 ^ 63)
+    (hT : T.length < 16) (hblk : blk.length = 16) (hf16 : full % 16 = 0) (hfull : full + T.length < 2 ^ 63)
     (hl : l.Rep r acc) :
     SepWP cpProg6r (cpPl6.base + 0x360#64) sm
       (((aad + BitVec.ofNat 64 full) ↦ₛ T) ∗ (scr ↦ₛ blk) ∗ polyLimbsAt (sm.sp + 0x94#64) l ∗ F)
@@ -299,4 +318,111 @@ theorem aadTail_ok [CpPlacement] (F : SepProp) (sm : Arm64.State) (aad scr : Bit
           rw [pure_sepConj_of_true ⟨hl', hblk'⟩]
           sep_entail
 
-#print axioms aadTail_ok
+
+theorem pad16_drop (A : Bytes) :
+    pad16 A = pad16 (A.drop (16 * (A.length / 16))) := by
+  simp only [pad16, List.length_drop]; congr 1; omega
+
+/-- Registers the whole AAD MAC segment leaves unchanged. -/
+def macKeepsA (sm st : Arm64.State) : Prop :=
+  st.sp = sm.sp ∧ st.readReg64 .x20 = sm.readReg64 .x20 ∧ st.readReg64 .x21 = sm.readReg64 .x21 ∧
+  st.readReg64 .x22 = sm.readReg64 .x22 ∧ st.readReg64 .x23 = sm.readReg64 .x23 ∧
+  st.readReg64 .x24 = sm.readReg64 .x24 ∧ st.readReg64 .x25 = sm.readReg64 .x25 ∧
+  st.readReg64 .x29 = sm.readReg64 .x29 ∧ calleeSavedVRegs st = calleeSavedVRegs sm
+
+theorem macAad_ok [CpPlacement] (F : SepProp) (sm : Arm64.State) (aad scr : BitVec 64)
+    (A blk : Bytes) (r acc : Nat) (l : PolyLimbs) (v8 : BitVec 64)
+    (hpc : sm.pc = cpPl6.base + 0x2f4#64) (hrun : sm.status = .Running)
+    (hsp : (sm.sp &&& 15#64 == 0#64) = true) (hcl : chachapolyLib.CodeLoaded cpMpl sm.mem)
+    (h21 : sm.readReg64 .x21 = BitVec.ofNat 64 A.length) (h23 : sm.readReg64 .x23 = aad)
+    (h29 : sm.readReg64 .x29 = scr + 0xc0#64)
+    (hA : A.length < 2 ^ 63) (hblk : blk.length = 16) (hl : l.Rep r acc) :
+    SepWP cpProg6r (cpPl6.base + 0x360#64) sm
+      ((aad ↦ₛ A) ∗ (scr ↦ₛ blk) ∗ polyLimbsAt (sm.sp + 0x94#64) l ∗ ((sm.sp + 8#64) ↦₆₄ v8) ∗ F)
+      (sepPost (fun sm' => macKeepsA sm sm')
+        (∃∗ l' : PolyLimbs, ∃∗ blk' : Bytes,
+          ⌜l'.Rep r (polyBlocks r acc (A ++ pad16 A)) ∧ blk'.length = 16⌝ ∗
+          (aad ↦ₛ A) ∗ (scr ↦ₛ blk') ∗ polyLimbsAt (sm.sp + 0x94#64) l' ∗
+          ((sm.sp + 8#64) ↦₆₄ sm.readReg64 .x19) ∗ F)) := by
+  have hfm := mask16_val A.length hA
+  have htm := mask15_val (16 * (A.length / 16)) (A.length % 16) (by omega) (by omega) (by omega)
+  rw [show 16 * (A.length / 16) + A.length % 16 = A.length by omega] at htm
+  have hT : (A.drop (16 * (A.length / 16))).length = A.length % 16 := by simp; omega
+  have hsplit : A ++ pad16 A = A.take (16 * (A.length / 16)) ++
+      (A.drop (16 * (A.length / 16)) ++ pad16 (A.drop (16 * (A.length / 16)))) := by
+    rw [← List.append_assoc, List.take_append_drop, ← pad16_drop]
+  rw [hsplit, polyBlocks_append r (A.length / 16) _ _ _ (by simp; omega)]
+  clear hsplit
+  by_cases hsm : A.length < 16
+  · have h0 : A.length / 16 = 0 := by omega
+    simp only [h0, Nat.mul_zero, List.take_zero, polyBlocks_nil, List.drop_zero] at hT htm hfm ⊢
+    have hlo : (BitVec.ofNat 64 A.length).ult 16#64 = true := by simp [BitVec.ult]; omega
+    clear hT
+    refine MultiPlacedLib.seq_codeLoaded (mid := cpPl6.base + 0x328#64) hcl ?_
+    wp_steps 5
+    refine SepWP.done (by simp [wp_norm, arm64_norm, hlo]) (by simp [wp_norm, arm64_norm, hrun]) ?_
+    intro hcl1
+    refine SepWP.mono (SepWP.weaken_pre ?_ (aadTail_ok ((sm.sp + 8#64) ↦₆₄ sm.readReg64 .x19 ∗ F) _ aad scr A
+      blk 0 r acc l (by simp [wp_norm, arm64_norm, hlo]) (by simp [wp_norm, arm64_norm, hrun])
+      (by simpa [wp_norm, arm64_norm] using hsp) (by simpa [wp_norm, arm64_norm] using hcl1)
+      (by simp [wp_norm, arm64_norm, Nat.mod_eq_of_lt hsm]) (by simp [wp_norm, arm64_norm])
+      (by simp [wp_norm, arm64_norm, h21]) (by simp [wp_norm, arm64_norm, h23])
+      (by simp [wp_norm, arm64_norm, h29]) hsm hblk (by decide) (by omega) hl)) ?_
+    · simp only [wp_norm, arm64_norm, show BitVec.ofNat 64 0 = 0#64 from rfl, BitVec.add_zero]
+      sep_entail
+    intro sf Pf _ _ ⟨hk, hQ⟩
+    simp only [macKeeps, wp_norm, arm64_norm] at hk
+    refine ⟨?_, Entails.trans hQ ?_⟩
+    · obtain ⟨k1, k20, k21, k22, k23, k24, k25, k26, k27, k29, kv⟩ := hk
+      exact ⟨k1, k20, k21, k22, k23, k24, k25, k29, kv⟩
+    · simp only [wp_norm, arm64_norm, show BitVec.ofNat 64 0 = 0#64 from rfl, BitVec.add_zero]
+      exact Entails.refl _
+  · obtain ⟨j, hj⟩ : ∃ j, A.length / 16 = j + 1 := ⟨A.length / 16 - 1, by omega⟩
+    have hlo : (BitVec.ofNat 64 A.length).ult 16#64 = false := by simp [BitVec.ult]; omega
+    have htl : (A.take (16 * (A.length / 16))).length = 16 * (A.length / 16) := by simp; omega
+    have hAs : (aad ↦ₛ A) = (aad ↦ₛ A.take (16 * (A.length / 16))) ∗
+        ((aad + BitVec.ofNat 64 (16 * (A.length / 16))) ↦ₛ A.drop (16 * (A.length / 16))) := by
+      conv => lhs; rw [← List.take_append_drop (16 * (A.length / 16)) A]
+      rw [pointsToBytes_append, htl]
+    rw [hAs]
+    refine MultiPlacedLib.seq_codeLoaded (mid := cpPl6.base + 0x310#64) hcl ?_
+    wp_steps 7
+    refine SepWP.done (by simp [wp_norm, arm64_norm]) (by simp [wp_norm, arm64_norm, hrun]) ?_
+    intro hclm
+    refine MultiPlacedLib.seq_codeLoaded (mid := cpPl6.base + 0x328#64) hclm ?_
+    rw [hj] at htl hT ⊢
+    have hfl : 16 * (j + 1) + A.length % 16 = A.length := by omega
+    refine SepWP.mono (SepWP.weaken_pre ?_ (aadLoop_ok r j
+      (((aad + BitVec.ofNat 64 (16 * (j + 1))) ↦ₛ A.drop (16 * (j + 1))) ∗ (scr ↦ₛ blk) ∗
+        ((sm.sp + 8#64) ↦₆₄ sm.readReg64 .x19) ∗ F) _ aad (A.take (16 * (j + 1))) acc l
+      (by simp [wp_norm, arm64_norm]) (by simp [wp_norm, arm64_norm, hrun])
+      (by simpa [wp_norm, arm64_norm] using hsp) (by simpa [wp_norm, arm64_norm] using hclm)
+      (by simp [wp_norm, arm64_norm]) (by simp [wp_norm, arm64_norm]) htl (by omega) hl)) ?_
+    · simp only [wp_norm, arm64_norm]
+      sep_entail
+    intro s1 P1 hpc1 hrun1 ⟨hk1, hQ1⟩ hcl1
+    simp only [macKeeps, wp_norm, arm64_norm] at hk1
+    obtain ⟨k1, k20, k21, k22, k23, k24, k25, k26, k27, k29, kv⟩ := hk1
+    refine SepWP.weaken_pre hQ1 ?_
+    refine SepWP.exists_elim fun l1 => ?_
+    refine SepWP.pure_elim fun hl1 => ?_
+    refine SepWP.mono (SepWP.weaken_pre ?_ (aadTail_ok
+      ((aad ↦ₛ A.take (16 * (j + 1))) ∗ ((sm.sp + 8#64) ↦₆₄ sm.readReg64 .x19) ∗ F) s1 aad scr
+      (A.drop (16 * (j + 1))) blk (16 * (j + 1)) r _ l1 hpc1 hrun1
+      (by rw [k1]; simpa [wp_norm, arm64_norm] using hsp) hcl1
+      (by rw [k27, hT]) (by rw [k26]) (by rw [k21, h21, hT, hfl]) (by rw [k23, h23])
+      (by rw [k29, h29]) (by rw [hT]; omega) hblk (by omega) (by rw [hT]; omega) hl1)) ?_
+    · simp only [k1]
+      sep_entail
+    intro sf Pf _ _ ⟨hk, hQ⟩
+    simp only [macKeeps] at hk
+    obtain ⟨g1, g20, g21, g22, g23, g24, g25, g26, g27, g29, gv⟩ := hk
+    refine ⟨⟨by rw [g1, k1], by rw [g20, k20], by rw [g21, k21], by rw [g22, k22], by rw [g23, k23],
+      by rw [g24, k24], by rw [g25, k25], by rw [g29, k29], by rw [gv, kv]⟩, Entails.trans hQ ?_⟩
+    simp only [k1]
+    refine Entails.sepExists_elim fun l' => Entails.sepExists_elim fun b' => ?_
+    refine Entails.trans ?_ (Entails.sepExists_intro l')
+    refine Entails.trans ?_ (Entails.sepExists_intro b')
+    sep_entail
+
+#print axioms macAad_ok
