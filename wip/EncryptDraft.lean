@@ -510,21 +510,6 @@ theorem pn_blk_ok [CpPlacement] :
     subroutine_ok (chachapolyLib.blockProgram cpMpl 10) cpPl10.base
       (chachapolyLib.withCodeLoaded cpMpl polyNewContract) := polyNewContract_ok
 
-theorem unpackLE_ofNat_natLe (x : Nat) :
-    ByteSlice.unpackLE 8 (BitVec.ofNat 64 x) = natLe 8 x := by
-  simp only [ByteSlice.unpackLE, natLe, List.range, List.range.loop, List.map]
-  refine List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
-    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
-    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, rfl⟩⟩⟩⟩⟩⟩⟩⟩ <;>
-  · apply BitVec.eq_of_toNat_eq
-    simp only [BitVec.extractLsb'_toNat, BitVec.toNat_ofNat, Nat.shiftRight_eq_div_pow]
-    omega
-
-theorem write64_pair (D : List (BitVec 8)) (v1 v2 : BitVec 64) (hD : D.length = 16) :
-    ByteSlice.write64 (ByteSlice.write64 D 0 v1) 8 v2 = ByteSlice.unpackLE 8 v1 ++ ByteSlice.unpackLE 8 v2 := by
-  match D, hD with
-  | _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: [], _ => rfl
-
 
 def sigmaSym : String := "chachapoly_verified:.rodata.cst16+0x0"
 
@@ -772,5 +757,66 @@ theorem encrypt_draft [CpPlacement] :
           simp only [sepConj_assoc]
           sep_frame
         · intro sf6 hpcf6 hrunf6 hspf6 hcsf6
-          trace_state
-          sorry
+          obtain ⟨i19, i20, i21, i22, i23, i24, i25, i26, i27, i28, i29, iv⟩ := hcsf6
+          simp only [wp_norm, arm64_norm] at i19 i20 i21 i22 i23 i24 i25 i26 i27 i28 i29 iv hspf6
+          simp only [MultiPlacedLib.withCodeLoaded, polyProcBlockContract, polyBlockContract]
+          refine SepWP.done (by simp [wp_norm, arm64_norm, hpcf6]) hrunf6 ?_
+          intro hcl8
+          show SepWP cpProg6r _ _ _ _ _
+          rw [sepExists_sepConj_left]
+          refine SepWP.exists_elim fun l3 => ?_
+          rw [sepConj_assoc]
+          refine SepWP.pure_elim fun hl3 => ?_
+          refine Proofs.SepWP.foldPart (Entails.of_eq_explicit (polyState_bytes (s0.sp - 476#64) pw.1 pw.2.1
+            pw.2.2.1 pw.2.2.2 l3)) (by sep_focus) ?_
+          have hlens : (natLe 8 a.length ++ natLe 8 msg.length).length = 16 := by simp [natLe]
+          refine Proofs.SepWP.foldPart (Entails.of_eq_explicit (pointsToBytes_append (s0.sp - 288#64)
+            (natLe 8 a.length ++ natLe 8 msg.length) (List.drop 16 (initState k 1 n).bytes)).symm)
+            (by sep_focus) ?_
+          have hscl : (natLe 8 a.length ++ natLe 8 msg.length ++ List.drop 16 (initState k 1 n).bytes).length = 64 := by
+            simp [natLe, Spec.State.bytes, word32Bytes]
+          have hpBl := polyBytes_length pw.1 pw.2.1 pw.2.2.1 pw.2.2.2 l3
+          generalize hscr : natLe 8 a.length ++ natLe 8 msg.length ++ List.drop 16 (initState k 1 n).bytes = scr64 at *
+          generalize hpB : polyBytes pw.1 pw.2.1 pw.2.2.1 pw.2.2.2 l3 = pB at *
+          refine MultiPlacedLib.seq_codeLoaded (mid := cpPl6.base + 0x410#64) (by simpa [wp_norm, arm64_norm] using hcl8) ?_
+          wp_steps 10
+          refine SepWP.done (by simp [wp_norm, arm64_norm]) (by simp [wp_norm, arm64_norm, hrunf6]) ?_
+          intro hcl9
+          refine MultiPlacedLib.seq_codeLoaded (mid := cpPl6.base + 0x414#64) hcl9 ?_
+          rw [copy56 scr64 pB hscl hpBl, zero_chain8 mk hmkl]
+          have hd8 : (scr64.drop 56).length = 8 := by simp [hscl]
+          rw [pointsToBytes_append, hpBl, ← hpB, ← polyState_bytes]
+          have hz : List.replicate 32 (0#8) = [0#8] ++ (List.replicate 16 0#8 ++ List.replicate 15 0#8) := rfl
+          rw [hz, pointsToBytes_append, pointsToBytes_append,
+            bytes16_words _ (List.replicate 16 0#8) (by simp)]
+          simp only [polyLimbsAt]
+          have hρf : cpPl6.ρ "<poly1305::Poly1305 as universal_hash::UniversalHash>::finalize" = cpPl8.base := by
+            have h : Obj.lookupBlockSym "<poly1305::Poly1305 as universal_hash::UniversalHash>::finalize"
+                chachapolyLib.blocks = some (8, 0) := by decide +kernel
+            simp [cpPl6, cpPl8, MultiPlacedLib.blockPlacement, MultiPlacedLib.resolve, h]
+          wp_step
+          rw [show cpPl6.base + 1040#64 + (cpPl8.base - cpPl6.base - 1040#64) = cpPl8.base by bv_omega]
+          show SepWP (chachapolyLib.blockProgram cpMpl 6) _ _ _ _ _
+          have hb := hl3.2.2.1
+          refine MultiPlacedLib.sepWP_call_block (j := 8) (by decide) polyFinalContract_ok
+            (x := ⟨s0.sp - 288#64, s0.sp - 143#64, pw.1, pw.2.1, pw.2.2.1, pw.2.2.2, l3.h0, l3.h1, l3.h2, l3.h3,
+              l3.h4, word32At (List.replicate 16 0#8) 0, word32At (List.replicate 16 0#8) 4,
+              word32At (List.replicate 16 0#8) 8, word32At (List.replicate 16 0#8) 12⟩)
+            (ret_pc := cpPl6.base + 1044#64) (F := ?F5)
+            (by simpa [wp_norm, arm64_norm] using hcl9) (by simp [wp_norm, arm64_norm])
+            (by simp [wp_norm, arm64_norm, hrunf6])
+            (by simp [wp_norm, arm64_norm, State.spAligned, hspf6, g1, hspf4, k1s, hspf2]; simpa using hsp_align)
+            (by simp [wp_norm, arm64_norm]) ?_
+            (fun _ _ _ hp => not_satisfies_false_sepConj hp) (fun _ _ _ _ he => not_satisfies_false_sepConj he) ?_
+          rotate_left
+          · intro R hm
+            simp only [MultiPlacedLib.withCodeLoaded, polyFinalContract]
+            simp only [wp_norm, arm64_norm, sepConj_assoc, satisfies_pure_sepConj] at hm hcl9 ⊢
+            refine ⟨⟨⟨hb.1, hb.2.1, hb.2.2.1, hb.2.2.2.1, hb.2.2.2.2⟩, hcl9⟩, ?_⟩
+            simp only [← sepConj_assoc] at hm ⊢
+            refine Satisfies.mono (sepConj_mono_left ?_) hm
+            simp only [sepConj_assoc]
+            sep_frame
+          · intro sf7 hpcf7 hrunf7 hspf7 hcsf7
+            trace_state
+            sorry
