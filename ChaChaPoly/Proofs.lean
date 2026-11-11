@@ -19,3 +19,4 @@ public import ChaChaPoly.Proofs.ApplyKeystream5
 public import ChaChaPoly.Proofs.ApplyKeystream6
 public import ChaChaPoly.Proofs.ApplyKeystream7
 public import ChaChaPoly.Proofs.ApplyKeystream8
+public import ChaChaPoly.Proofs.ApplyKeystream9

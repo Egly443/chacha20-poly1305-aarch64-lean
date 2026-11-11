@@ -200,4 +200,43 @@ def cipherDropContract : Spec (BitVec 64) where
   pre := fun c s0 => ⌜s0.readReg64 .x0 = c⌝ ∗ memRegion (c + 56#64) 129
   post := fun c _ _ => memRegion (c + 56#64) 129
 
+/-! ## The ChaCha20 stream cipher wrapper -/
+
+/-- The demangled name of `StreamCipherCoreWrapper<ChaChaCore>::apply_keystream`. -/
+def applyKeystreamSym : String :=
+  "<cipher::stream_wrapper::StreamCipherCoreWrapper<chacha20::ChaChaCore<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B1>, typenum::bit::B0>>> as cipher::stream::StreamCipher>::apply_keystream"
+
+/-- Ghost state of an `apply_keystream` call: cipher pointer `c` (`x0`), data pointer `bufp`
+    (`x1`), the data bytes, the ChaCha state `s` at `c`, and the key-stream buffer at `c + 0x40`. -/
+structure ApplyKeystreamArgs where
+  c : BitVec 64
+  bufp : BitVec 64
+  data : Bytes
+  s : State
+  buf : State
+
+/-- Contract of `<StreamCipherCoreWrapper<ChaChaCore> as StreamCipher>::apply_keystream(&mut self,
+    buf: &mut [u8])`, entered with an empty key-stream buffer (position byte `0` at `c + 0x80`),
+    as both call sites in the AEAD do.
+
+    Precondition: the data length fits the 32-bit block counter
+    (`⌈len / 64⌉ + s.x12 < 2^32`); otherwise the code panics. The code uses `0x230` bytes of stack
+    (its own `0x1a0`-byte frame and the `0x90` bytes the block function needs below it).
+
+    Postcondition: the data is XORed with the key stream of `s` (`streamXor`, RFC 8439 §2.4 from
+    an explicit state), the counter advanced by `⌈len / 64⌉`, and the buffer position is
+    `len mod 64`. -/
+def applyKeystreamContract : Spec ApplyKeystreamArgs where
+  pre := fun a s0 =>
+    ⌜s0.readReg64 .x0 = a.c ∧ s0.readReg64 .x1 = a.bufp ∧
+      s0.readReg64 .x2 = BitVec.ofNat 64 a.data.length ∧ a.data.length < 2 ^ 63 ∧
+      (a.data.length + 63) / 64 + a.s.x12.toNat < 2 ^ 32⌝ ∗
+    stateAt a.c a.s ∗ stateAt (a.c + 0x40#64) a.buf ∗ ((a.c + 0x80#64) ↦₈ 0#8) ∗
+    (a.bufp ↦ₛ a.data) ∗ stackFrame s0 0x230
+  post := fun a s0 _ =>
+    stateAt a.c (a.s.advance ((a.data.length + 63) / 64)) ∗
+    (∃∗ b : State, stateAt (a.c + 0x40#64) b) ∗
+    ((a.c + 0x80#64) ↦₈ BitVec.ofNat 8 (a.data.length % 64)) ∗
+    (a.bufp ↦ₛ streamXor a.s a.data) ∗ stackFrame s0 0x230
+
 end ChaChaPoly.Spec
