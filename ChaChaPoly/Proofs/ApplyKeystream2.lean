@@ -57,27 +57,57 @@ theorem xorPrefix_full (ob da ks : Bytes) (hob : ob.length = 64) (hda : da.lengt
   have hl : (xorBytes da ks).length = 64 := by simp [xorBytes, hda, hks]
   rw [xorPrefix, List.drop_of_length_le (by omega), List.append_nil, List.take_of_length_le (by omega)]
 
+/-- Registers the XOR loop leaves alone (it writes only `x8`, `x9`, `x12`, `x25`). -/
+def xorKeeps (sm st : Arm64.State) : Prop :=
+  st.sp = sm.sp ∧ st.readReg64 .x0 = sm.readReg64 .x0 ∧
+  st.readReg64 .x1 = sm.readReg64 .x1 ∧
+  st.readReg64 .x2 = sm.readReg64 .x2 ∧
+  st.readReg64 .x3 = sm.readReg64 .x3 ∧
+  st.readReg64 .x4 = sm.readReg64 .x4 ∧
+  st.readReg64 .x5 = sm.readReg64 .x5 ∧
+  st.readReg64 .x6 = sm.readReg64 .x6 ∧
+  st.readReg64 .x7 = sm.readReg64 .x7 ∧
+  st.readReg64 .x10 = sm.readReg64 .x10 ∧
+  st.readReg64 .x11 = sm.readReg64 .x11 ∧
+  st.readReg64 .x13 = sm.readReg64 .x13 ∧
+  st.readReg64 .x14 = sm.readReg64 .x14 ∧
+  st.readReg64 .x15 = sm.readReg64 .x15 ∧
+  st.readReg64 .x16 = sm.readReg64 .x16 ∧
+  st.readReg64 .x17 = sm.readReg64 .x17 ∧
+  st.readReg64 .x18 = sm.readReg64 .x18 ∧
+  st.readReg64 .x19 = sm.readReg64 .x19 ∧
+  st.readReg64 .x20 = sm.readReg64 .x20 ∧
+  st.readReg64 .x21 = sm.readReg64 .x21 ∧
+  st.readReg64 .x22 = sm.readReg64 .x22 ∧
+  st.readReg64 .x23 = sm.readReg64 .x23 ∧
+  st.readReg64 .x24 = sm.readReg64 .x24 ∧
+  st.readReg64 .x26 = sm.readReg64 .x26 ∧
+  st.readReg64 .x27 = sm.readReg64 .x27 ∧
+  st.readReg64 .x28 = sm.readReg64 .x28 ∧
+  st.readReg64 .x29 = sm.readReg64 .x29 ∧
+  st.readReg64 .x30 = sm.readReg64 .x30 ∧
+  st.readVReg128 0#5 = sm.readVReg128 0#5 ∧ calleeSavedVRegs st = calleeSavedVRegs sm
+
 theorem xorLoop_ok [CpPlacement] (sm : Arm64.State) (A K O : BitVec 64) (da ks ob : Bytes) (P : SepProp)
     (hpc : sm.pc = cpPl4.base + 0x3cc#64) (hrun : sm.status = .Running)
     (hda : da.length = 64) (hks : ks.length = 64) (hob : ob.length = 64)
     (h22 : sm.readReg64 .x22 = A) (h23 : sm.readReg64 .x23 = K) (h24 : sm.readReg64 .x24 = O)
     (h25 : sm.readReg64 .x25 = 0#64) :
     SepWP cpProg4r (cpPl4.base + 0x3ec#64) sm ((A ↦ₛ da) ∗ (K ↦ₛ ks) ∗ (O ↦ₛ ob) ∗ P)
-      (sepPostState (fun st => st.readReg64 .x25 = 64#64 ∧ st.readReg64 .x22 = A ∧
-          st.readReg64 .x23 = K ∧ st.readReg64 .x24 = O)
+      (sepPostState (fun st => st.readReg64 .x25 = 64#64 ∧ xorKeeps sm st)
         (fun _ => (A ↦ₛ da) ∗ (K ↦ₛ ks) ∗ (O ↦ₛ xorBytes da ks) ∗ P)) := by
   wp_loop_measure 63 (fun m st =>
-    m ≤ 63 ∧ st.readReg64 .x25 = BitVec.ofNat 64 (63 - m) ∧ st.readReg64 .x22 = A ∧
-      st.readReg64 .x23 = K ∧ st.readReg64 .x24 = O)
+    m ≤ 63 ∧ st.readReg64 .x25 = BitVec.ofNat 64 (63 - m) ∧ xorKeeps sm st)
     (fun m _ => (A ↦ₛ da) ∗ (K ↦ₛ ks) ∗ (O ↦ₛ xorPrefix ob da ks (63 - m)) ∗ P)
   case base =>
-    simp only [Nat.sub_zero] at *
+    simp only [Nat.sub_zero, xorKeeps] at *
     have hl : (xorPrefix ob da ks 63).length = 64 := xorPrefix_length _ _ _ _ hob hda hks (by omega)
     wp_steps
     rw [xorPrefix_step _ _ _ _ hob hda hks (by omega), xorPrefix_full _ _ _ hob hda hks]
     wp_done
   case step =>
     right
+    simp only [xorKeeps] at *
     rw [show 63 - (m' + 1) = 62 - m' by omega] at *
     have hl : (xorPrefix ob da ks (62 - m')).length = 64 :=
       xorPrefix_length _ _ _ _ hob hda hks (by omega)

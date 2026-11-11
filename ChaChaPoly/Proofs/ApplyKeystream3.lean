@@ -55,7 +55,8 @@ theorem halfKeepsK_setPC {a b : Arm64.State} (p : BitVec 64) (h : halfKeepsK a b
 theorem segA_ok [CpPlacement] (sm : Arm64.State) (c : Spec.State) (old : BitVec 32) (F : SepProp)
     (hpc : sm.pc = cpPl4.base + 0x144#64) (hrun : sm.status = .Running) (hsp : (sm.sp &&& 15#64 == 0#64) = true) (hregs : regsO sm c) :
     SepWP cpProg4r (cpPl4.base + 0x2e0#64) sm (((sm.sp + 0x6c#64) ↦₃₂ old) ∗ F)
-      (fun sm' P' => (regsK sm' (iter doubleRound 10 c) ∧ halfKeepsK sm sm') ∧
+      (fun sm' P' => (regsK sm' (iter doubleRound 10 c) ∧ halfKeepsK sm sm' ∧
+          sm'.readReg64 .x25 = 0#64) ∧
         (P' ⊢ ((sm.sp + 0x6c#64) ↦₃₂ c.x12) ∗ F)) := by
   unfold regsO at hregs
   obtain ⟨h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15⟩ := hregs
@@ -74,8 +75,9 @@ theorem segA_ok [CpPlacement] (sm : Arm64.State) (c : Spec.State) (old : BitVec 
     rw [← hlast] at hr2
     wp_steps
     refine SepWP.done (by simp [wp_norm, arm64_norm]) (by simp [wp_norm, arm64_norm, hrun2]) ?_
-    exact ⟨⟨by simpa using hr2, halfKeepsK_setPC _ (halfKeepsK_trans ‹halfKeepsK sm st› hk2)⟩,
+    refine ⟨⟨by simpa using hr2, halfKeepsK_setPC _ (halfKeepsK_trans ‹halfKeepsK sm st› hk2), ?_⟩,
       Entails.refl _⟩
+    simp [wp_norm, arm64_norm, h252, ‹st.readReg64 .x25 = _›]
   case step =>
     right
     have hnext : iter doubleRound (9 - m') c = doubleRound (iter doubleRound (8 - m') c) := by
