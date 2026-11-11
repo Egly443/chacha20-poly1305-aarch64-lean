@@ -60,7 +60,8 @@ theorem regsO_setPC (sm : Arm64.State) (p : BitVec 64) (c : Spec.State) :
     regsO (sm.setPC p) c = regsO sm c := by
   simp only [regsO, wp_norm, arm64_norm]
 
-attribute [irreducible] regsO akScratch
+attribute [local irreducible] regsO
+attribute [irreducible] akScratch
 
 theorem outerLoop_ok [CpPlacement] (sm : Arm64.State) (s : Spec.State) (tail len c bufp : BitVec 64)
     (nb : Nat) (data : Bytes) (F : SepProp)
