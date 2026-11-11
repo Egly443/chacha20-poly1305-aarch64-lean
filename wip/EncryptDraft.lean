@@ -510,6 +510,22 @@ theorem pn_blk_ok [CpPlacement] :
     subroutine_ok (chachapolyLib.blockProgram cpMpl 10) cpPl10.base
       (chachapolyLib.withCodeLoaded cpMpl polyNewContract) := polyNewContract_ok
 
+theorem unpackLE_ofNat_natLe (x : Nat) :
+    ByteSlice.unpackLE 8 (BitVec.ofNat 64 x) = natLe 8 x := by
+  simp only [ByteSlice.unpackLE, natLe, List.range, List.range.loop, List.map]
+  refine List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
+    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
+    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, rfl⟩⟩⟩⟩⟩⟩⟩⟩ <;>
+  · apply BitVec.eq_of_toNat_eq
+    simp only [BitVec.extractLsb'_toNat, BitVec.toNat_ofNat, Nat.shiftRight_eq_div_pow]
+    omega
+
+theorem write64_pair (D : List (BitVec 8)) (v1 v2 : BitVec 64) (hD : D.length = 16) :
+    ByteSlice.write64 (ByteSlice.write64 D 0 v1) 8 v2 = ByteSlice.unpackLE 8 v1 ++ ByteSlice.unpackLE 8 v2 := by
+  match D, hD with
+  | _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: [], _ => rfl
+
+
 def sigmaSym : String := "chachapoly_verified:.rodata.cst16+0x0"
 
 set_option maxRecDepth 400000 in
@@ -703,5 +719,58 @@ theorem encrypt_draft [CpPlacement] :
         simp only [wp_norm, arm64_norm] at f19 f20 f21 f22 f23 f24 f25 f26 f27 f28 f29 fv hspf4
         refine SepWP.done (by simp [wp_norm, arm64_norm, hpcf4]) hrunf4 ?_
         intro hcl5
-        trace_state
-        sorry
+        refine SepWP.exists_elim fun kb2 => ?_
+        have hCl : (streamXor (initState k 1 n) msg).length = msg.length := streamXor_length _ _ _ rfl
+        refine MultiPlacedLib.seq_codeLoaded (mid := cpPl6.base + 0x3d8#64) hcl5 ?_
+        refine SepWP.mono (SepWP.weaken_pre ?_ (macCt_ok ?FC _ buf (s0.sp - 288#64)
+          (streamXor (initState k 1 n) msg) blk1 (clamp (leNat (mk.take 16)))
+          (polyBlocks (clamp (leNat (mk.take 16))) 0 (a ++ pad16 a)) l1
+          (by simp [wp_norm, arm64_norm, hpcf4]) hrunf4
+          (by simp [wp_norm, arm64_norm, hspf4, k1s, hspf2]; simpa using hsp_align) hcl5
+          (by simp [wp_norm, arm64_norm, f20, k20, d20, hCl]; rw [streamXor_length _ _ _ rfl])
+          (by simp [wp_norm, arm64_norm, f22, k22, d22])
+          (by simp [wp_norm, arm64_norm, f29, k29, d29]; try bv_omega)
+          (by rw [hCl]; omega) hblk1 hl1)) ?_
+        · try simp only [wp_norm, arm64_norm, hspf4, k1s, hspf2]
+          simp only [← sepConj_assoc]
+          sep_frame
+        intro sf5 Pf5 hpc5 hrun5 ⟨hk5, hQ5⟩ hcl6
+        refine SepWP.weaken_pre hQ5 ?_
+        refine SepWP.exists_elim fun l2 => SepWP.exists_elim fun blk2 => ?_
+        refine SepWP.pure_elim fun ⟨hl2, hblk2⟩ => ?_
+        obtain ⟨g1, g20, g21, g22, g25, g27, g28, g29, gv⟩ := hk5
+        simp only [wp_norm, arm64_norm] at g1 g20 g21 g22 g25 g27 g28 g29 gv
+        refine MultiPlacedLib.seq_codeLoaded (mid := cpPl6.base + 0x3e4#64) hcl6 ?_
+        wp_steps 3
+        refine SepWP.done (by simp [wp_norm, arm64_norm]) (by simp [wp_norm, arm64_norm, hrun5]) ?_
+        intro hcl7
+        refine MultiPlacedLib.seq_codeLoaded (mid := cpPl6.base + 0x3e8#64) hcl7 ?_
+        wp_step
+        rw [write64_pair _ _ _ hblk2, unpackLE_ofNat_natLe, unpackLE_ofNat_natLe]
+        rw [rho6_procBlock, show cpPl6.base + 996#64 + (cpPl9.base - cpPl6.base - 996#64) = cpPl9.base by bv_omega]
+        show SepWP (chachapolyLib.blockProgram cpMpl 6) _ _ _ _ _
+        have hlens : (natLe 8 a.length ++ natLe 8 msg.length).length = 16 := by simp [natLe]
+        refine MultiPlacedLib.sepWP_call_block (j := 9) (by decide) pb_blk_ok
+          (x := (s0.sp - 476#64, s0.sp - 288#64, natLe 8 a.length ++ natLe 8 msg.length,
+            clamp (leNat (mk.take 16)),
+            polyBlocks (clamp (leNat (mk.take 16))) (polyBlocks (clamp (leNat (mk.take 16))) 0 (a ++ pad16 a))
+              (streamXor (initState k 1 n) msg ++ pad16 (streamXor (initState k 1 n) msg))))
+          (ret_pc := cpPl6.base + 1000#64) (F := ?F4)
+          (by simpa [wp_norm, arm64_norm] using hcl7) (by simp [wp_norm, arm64_norm])
+          (by simp [wp_norm, arm64_norm, hrun5])
+          (by simp [wp_norm, arm64_norm, State.spAligned, g1, hspf4, k1s, hspf2]; simpa using hsp_align)
+          (by simp [wp_norm, arm64_norm]) ?_
+          (fun _ _ _ hp => not_satisfies_false_sepConj hp) (fun _ _ _ _ he => not_satisfies_false_sepConj he) ?_
+        rotate_left
+        · intro R hm
+          simp only [MultiPlacedLib.withCodeLoaded, polyProcBlockContract]
+          simp only [wp_norm, arm64_norm, hcl7, sepExists_sepConj_left, satisfies_sepExists, g1, hspf4,
+            k1s, hspf2] at hm hcl7 ⊢
+          refine ⟨l2, ⟨⟨hlens, hl2⟩, hcl7⟩, ?_⟩
+          simp only [← sepConj_assoc] at hm ⊢
+          refine Satisfies.mono (sepConj_mono_left ?_) hm
+          simp only [sepConj_assoc]
+          sep_frame
+        · intro sf6 hpcf6 hrunf6 hspf6 hcsf6
+          trace_state
+          sorry
