@@ -254,6 +254,11 @@ def decryptSym : String := "chachapoly_decrypt"
     between the binary panics in `apply_keystream`, so they are excluded here. -/
 def maxMsgLen : Nat := 274877906816
 
+/-- The 16-byte ChaCha constant `"expand 32-byte k"` (RFC 8439 §2.3, words `0..3` of the state),
+    which the entry points load from read-only data. -/
+def sigmaBytes : Bytes :=
+  [0x65, 0x78, 0x70, 0x61, 0x6e, 0x64, 0x20, 0x33, 0x32, 0x2d, 0x62, 0x79, 0x74, 0x65, 0x20, 0x6b]
+
 /-- Ghost state of an entry-point call: the five pointers (`x0`, `x1`, `x2`, `x4`, `x6`) and the
     bytes behind them — key, nonce, associated data, the in-place buffer `msg` (plaintext for
     encryption, ciphertext for decryption) and the 16 tag bytes (previous contents of the output
@@ -284,12 +289,14 @@ def aeadPre (g : AeadArgs) (s0 : Arm64.State) : SepProp :=
 /-- Contract of `chachapoly_encrypt` (RFC 8439 §2.8 AEAD encryption, in place, detached tag).
 
     It returns `0` (as a 32-bit `int`), the buffer holds the ciphertext and `tag` the tag of
-    `aeadEncrypt key nonce aad msg`; key, nonce and associated data are unchanged. Stack: the
+    `aeadEncrypt key nonce aad msg`; key, nonce and associated data are unchanged. `sigma` is
+    the address of the read-only constant `sigmaBytes` (in the library's `.rodata`; the headline
+    theorems instantiate it with its placed address). Stack: the
     function's `0x270`-byte frame plus `0x230` bytes for `apply_keystream`. -/
-def aeadEncryptContract : Spec AeadArgs where
-  pre := fun g s0 => aeadPre g s0 ∗ stackFrame s0 0x4a0
+def aeadEncryptContract (sigma : BitVec 64) : Spec AeadArgs where
+  pre := fun g s0 => aeadPre g s0 ∗ (sigma ↦ᵣ sigmaBytes) ∗ stackFrame s0 0x4a0
   post := fun g s0 sf =>
-    ⌜(sf.readReg64 .x0).truncate 32 = 0#32⌝ ∗
+    ⌜(sf.readReg64 .x0).truncate 32 = 0#32⌝ ∗ (sigma ↦ᵣ sigmaBytes) ∗
     (g.key ↦ₛ g.k) ∗ (g.nonce ↦ₛ g.n) ∗ (g.aad ↦ₛ g.a) ∗
     (g.buf ↦ₛ (aeadEncrypt g.k g.n g.a g.msg).1) ∗ (g.tag ↦ₛ (aeadEncrypt g.k g.n g.a g.msg).2) ∗
     stackFrame s0 0x4a0
@@ -300,12 +307,13 @@ def aeadEncryptContract : Spec AeadArgs where
     buffer holds `p`; if it rejects, it returns `-1` and the buffer is unchanged. All other
     inputs are unchanged. Stack: the function's `0x260`-byte frame plus `0x230` bytes for
     `apply_keystream`. -/
-def aeadDecryptContract : Spec AeadArgs where
-  pre := fun g s0 => aeadPre g s0 ∗ stackFrame s0 0x490
+def aeadDecryptContract (sigma : BitVec 64) : Spec AeadArgs where
+  pre := fun g s0 => aeadPre g s0 ∗ (sigma ↦ᵣ sigmaBytes) ∗ stackFrame s0 0x490
   post := fun g s0 sf =>
     (match aeadDecrypt g.k g.n g.a g.msg g.t with
       | some p => ⌜(sf.readReg64 .x0).truncate 32 = 0#32⌝ ∗ (g.buf ↦ₛ p)
       | none => ⌜(sf.readReg64 .x0).truncate 32 = 0xffffffff#32⌝ ∗ (g.buf ↦ₛ g.msg)) ∗
-    (g.key ↦ₛ g.k) ∗ (g.nonce ↦ₛ g.n) ∗ (g.aad ↦ₛ g.a) ∗ (g.tag ↦ₛ g.t) ∗ stackFrame s0 0x490
+    (g.key ↦ₛ g.k) ∗ (g.nonce ↦ₛ g.n) ∗ (g.aad ↦ₛ g.a) ∗ (g.tag ↦ₛ g.t) ∗ (sigma ↦ᵣ sigmaBytes) ∗
+    stackFrame s0 0x490
 
 end ChaChaPoly.Spec
