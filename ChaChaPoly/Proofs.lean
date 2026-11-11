@@ -28,3 +28,4 @@ public import ChaChaPoly.Proofs.EncryptModel
 public import ChaChaPoly.Proofs.Encrypt
 public import ChaChaPoly.Proofs.DecryptMac
 public import ChaChaPoly.Proofs.DecryptCmp
+public import ChaChaPoly.Proofs.Decrypt
