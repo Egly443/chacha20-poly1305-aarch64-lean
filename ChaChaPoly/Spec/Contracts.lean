@@ -2,6 +2,7 @@ module
 
 public import Arm64
 public import ChaChaPoly.Spec.RFC8439
+public import ChaChaPoly.Spec.Symbolic
 
 /-!
 # Machine-code contracts (trusted statements)
@@ -316,6 +317,30 @@ def aeadDecryptContract (sigma : BitVec 64) : Spec AeadArgs where
     (match aeadDecrypt g.k g.n g.a g.msg g.t with
       | some p => ⌜(sf.readReg64 .x0).truncate 32 = 0#32⌝ ∗ (g.buf ↦ₛ p)
       | none => ⌜(sf.readReg64 .x0).truncate 32 = 0xffffffff#32⌝ ∗ (g.buf ↦ₛ g.msg)) ∗
+    (g.key ↦ₛ g.k) ∗ (g.nonce ↦ₛ g.n) ∗ (g.aad ↦ₛ g.a) ∗ (g.tag ↦ₛ g.t) ∗ (sigma ↦ᵣ sigmaBytes) ∗
+    stackFrame s0 0x490
+
+/-- Two distinct messages with the same Poly1305 tag under one-time key `mk`: what an ideal MAC
+    (the symbolic model's `Prims.IdealMac`) rules out. -/
+def polyCollision (mk m m' : Bytes) : Prop := m ≠ m' ∧ poly1305Mac mk m = poly1305Mac mk m'
+
+/-- Integrity contract of `chachapoly_decrypt` (symbolic integrity, at the machine code).
+
+    Ghosts: the decrypt arguments `g` and an honest encryption, under the same key and nonce, of
+    a plaintext `pt` with associated data `aad0`, whose tag is the presented tag `g.t`. If the
+    presented associated data and ciphertext `(g.a, g.msg)` differ from the honest
+    `(aad0, ct0)`, the code returns `-1` and leaves the buffer unchanged, unless Poly1305 under
+    the one-time key collides on the two (distinct) authenticated encodings. -/
+def aeadDecryptIntegrityContract (sigma : BitVec 64) : Spec (AeadArgs × Bytes × Bytes) where
+  pre := fun (g, aad0, pt) s0 =>
+    ⌜(aeadEncrypt g.k g.n aad0 pt).2 = g.t ∧ (g.a, g.msg) ≠ (aad0, (aeadEncrypt g.k g.n aad0 pt).1) ∧
+      LengthsOk aad0 (aeadEncrypt g.k g.n aad0 pt).1⌝ ∗
+    (aeadDecryptContract sigma).pre g s0
+  post := fun (g, aad0, pt) s0 sf =>
+    ⌜(sf.readReg64 .x0).truncate 32 = 0xffffffff#32 ∨
+      polyCollision (poly1305KeyGen g.k g.n) (macData g.a g.msg)
+        (macData aad0 (aeadEncrypt g.k g.n aad0 pt).1)⌝ ∗
+    (∃∗ B : Bytes, ⌜(sf.readReg64 .x0).truncate 32 = 0xffffffff#32 → B = g.msg⌝ ∗ (g.buf ↦ₛ B)) ∗
     (g.key ↦ₛ g.k) ∗ (g.nonce ↦ₛ g.n) ∗ (g.aad ↦ₛ g.a) ∗ (g.tag ↦ₛ g.t) ∗ (sigma ↦ᵣ sigmaBytes) ∗
     stackFrame s0 0x490
 

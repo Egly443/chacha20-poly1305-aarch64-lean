@@ -1,14 +1,14 @@
 # Machine-code verification of ChaCha20-Poly1305 (RFC 8439) on AArch64, in Lean 4
 
-This repository works towards a machine-checked proof that an unmodified, stock-compiled
-AArch64 binary of the RustCrypto `chacha20poly1305` AEAD computes RFC 8439, on top of the
+This repository contains a machine-checked proof that an unmodified, stock-compiled AArch64
+binary of the RustCrypto `chacha20poly1305` AEAD computes RFC 8439, on top of the
 `arm64-semantics` engine of
 [google-deepmind/code-verification](https://github.com/google-deepmind/code-verification)
 (pinned as a submodule at `808b4b7`).
 
-**The refinement proof is not complete.** Read [Status](#status) before relying on anything
-here: it lists exactly which theorems are proved and which parts of the binary are not yet
-covered.
+Both entry points, `chachapoly_encrypt` and `chachapoly_decrypt`, and every function they call
+are proved against the RFC 8439 model. Read [Status](#status) and [Trusted assumptions](#trusted-assumptions)
+for exactly what is claimed.
 
 ## Status
 
@@ -20,6 +20,8 @@ Proved, kernel-checked, no `sorry`, standard axioms only (`scripts/audit`):
 | `chacha20_block_refines` | For every placement, the machine code of `ChaChaCore::write_keystream_block` (167 instructions) writes `(doubleRound^10 s) + s` and increments the block counter. No hooks. |
 | `apply_keystream_refines` | For every placement, the machine code of the stream-cipher wrapper `apply_keystream` (295 instructions: the per-block loop with the block function inlined, plus a `write_keystream_block` call for a final partial block) XORs the buffer in place with the RFC 8439 §2.4 key stream of the cipher state, advances the block counter by `⌈len/64⌉` and records `len mod 64` as the key-stream position. Precondition: position 0 on entry (true for the fresh cipher the entry points build) and no counter overflow (`⌈len/64⌉ + counter < 2^32`, the condition under which the code panics). No hooks. |
 | `chachapoly_encrypt_refines` | For every placement, the machine code of the entry point `chachapoly_encrypt` (307 instructions) meets `aeadEncryptContract`: given key, nonce, associated data and a message of at most `maxMsgLen` bytes in non-overlapping buffers (and the library's read-only ChaCha constant at its placed address), it returns `0`, leaves `(aeadEncrypt key nonce aad msg).1` in the buffer and writes `(aeadEncrypt key nonce aad msg).2` as the tag. Calls only verified code (the blocks above and musl's `memcpy` / `memset`). No hooks. |
+| `chachapoly_decrypt_refines` | For every placement, the machine code of the entry point `chachapoly_decrypt` (410 instructions) meets `aeadDecryptContract`: given key, nonce, associated data, a ciphertext of at most `maxMsgLen` bytes and a tag in non-overlapping buffers (and the read-only ChaCha constant), if `aeadDecrypt key nonce aad ct tag = some p` it returns `0` and leaves `p` in the buffer; if it is `none` it returns `-1` and leaves the buffer unchanged. The tag check is the binary's constant-time comparison (16 byte comparisons, each through `subtle::black_box`, AND-ed). No hooks. |
+| `chachapoly_decrypt_integrity` | Symbolic integrity transferred to the machine code: if the presented tag is the honest tag of an encryption of `(aad0, pt)` under the same key and nonce and the presented `(aad, ct)` differs from `(aad0, ct0)`, the binary returns `-1` and leaves the buffer unchanged, unless Poly1305 under the one-time key collides on the two distinct authenticated encodings (`polyCollision`), which is exactly what the ideal-MAC assumption of `aead_integrity` excludes. |
 | `poly1305_block_refines` | For every placement, the machine code of Poly1305's `State::compute_block` (74 instructions, `partial = false`) performs one RFC 8439 §2.5.1 step: the accumulator becomes `(acc + block‖0x01) · r mod 2^130 − 5`. No hooks. |
 | `poly1305_finalize_refines` | For every placement, the machine code of `Poly1305::finalize` (59 instructions, including the constant-time final reduction) writes the tag `(acc mod 2^130 − 5 + s) mod 2^128`. No hooks. |
 | `poly1305_new_refines` | For every placement, the machine code of `Poly1305::new` (24 instructions) builds a state representing `r = clamp(key[0..16])`, accumulator 0 and pad `key[16..32]`. The clamp is checked bit by bit by the kernel-checked ROBDD procedure. No hooks. |
@@ -30,12 +32,9 @@ Proved, kernel-checked, no `sorry`, standard axioms only (`scripts/audit`):
 | `aead_integrity` | Symbolic integrity of the construction: under an ideal MAC, any change to the ciphertext or the associated data is rejected. |
 | `ideal_mac_exists` | The ideal-MAC assumption is satisfiable (the symbolic model is not vacuous). |
 
-Not yet proved:
-
-- Machine-code refinement of the decryption entry point `chachapoly_decrypt` (its contract
-  `aeadDecryptContract` is written; every function it calls is proved).
-- Consequently the symbolic integrity theorem is about the Lean construction and is not yet
-  transferred to the binary (that needs the decryption theorem).
+Every function reachable from the two entry points is covered; there is no unproved part of
+the binary on the paths the contracts allow (the panic paths they exclude are listed under
+[Trusted assumptions](#trusted-assumptions)).
 
 ## Target
 
@@ -100,7 +99,7 @@ comparator/run.sh
   encryption, Poly1305, key generation and the AEAD (`RFC8439Vectors.lean`).
 - **Memory model of the contracts**: byte-granular separation logic; each contract names the
   memory it owns, including its stack frame (144 bytes for the block function, `0x4a0` bytes for
-  `chachapoly_encrypt`). The entry-point contracts own the key, nonce, associated data, buffer and
+  `chachapoly_encrypt`, `0x490` bytes for `chachapoly_decrypt`). The entry-point contracts own the key, nonce, associated data, buffer and
   tag as separate byte slices, so they apply when these do not overlap. They also own, read-only,
   the 16-byte ChaCha constant `"expand 32-byte k"` at its placed address in the library's
   `.rodata`; loading the ELF establishes it (`MultiPlacedLib.satisfies_dataRO_of_inElf`).
@@ -119,6 +118,8 @@ comparator/run.sh
 - **Symbolic model**: `aead_integrity` assumes `Prims.IdealMac` (no two messages share a tag
   under one key). Real Poly1305 has 16-byte tags and cannot satisfy it; the theorem excludes
   forgeries that do not go through a MAC collision and is not a computational bound.
+  `chachapoly_decrypt_integrity` states the same property for the binary with the collision made
+  explicit (`polyCollision` in `Spec/Contracts.lean`) instead of assumed away.
 - **Compiler flags**: auto-vectorisation is off, as in the upstream case studies, so the
   ChaCha20 code is scalar. The proofs are about the resulting bytes, whatever the flags.
 

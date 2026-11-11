@@ -84,6 +84,38 @@ theorem chachapoly_encrypt_refines (mpl : MultiPlacement) (hpl : chachapolyLib.P
   exact @Proofs.encrypt_ok ⟨mpl, hpl⟩
 
 set_option maxRecDepth 200000 in
+/-- **AEAD decryption (machine code).** For every placement of the library, the AArch64 code of
+    `chachapoly_decrypt` satisfies `aeadDecryptContract`: given key, nonce, associated data, a
+    ciphertext of at most `maxMsgLen` bytes and a tag in non-overlapping buffers (and the
+    library's read-only ChaCha constant at its placed address), if
+    `aeadDecrypt key nonce aad ct tag = some p` it returns `0` and leaves `p` in the buffer, and
+    if it is `none` it returns `-1` and leaves the buffer unchanged. The tag comparison is the
+    binary's constant-time `black_box` chain. No hooks. -/
+theorem chachapoly_decrypt_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Placeable mpl) :
+    subroutine_ok (chachapolyLib.blockProgram mpl 5)
+      (chachapolyLib.fnAddr mpl decryptSym)
+      (chachapolyLib.withCodeLoaded mpl (aeadDecryptContract (mpl.ρ sigmaDataSym))) := by
+  have hfn : chachapolyLib.fnAddr mpl decryptSym = mpl.base 5 := by
+    have h : lookupBlockSym decryptSym chachapolyLib.blocks = some (5, 0) := by
+      decide +kernel
+    simp [MultiPlacedLib.fnAddr, h]
+  rw [hfn]
+  exact @Proofs.decrypt_ok ⟨mpl, hpl⟩
+
+set_option maxRecDepth 200000 in
+/-- **Symbolic integrity (machine code).** For every placement, if the tag presented to the
+    machine code of `chachapoly_decrypt` is the honest tag of an encryption of `(aad0, pt)` under
+    the same key and nonce, and the presented `(aad, ct)` differs from `(aad0, ct0)`, then the
+    code returns `-1` and leaves the buffer unchanged, unless Poly1305 under the one-time key has
+    a collision on the two (distinct) authenticated encodings, which is exactly what the ideal-MAC
+    assumption of `aead_integrity` rules out. -/
+theorem chachapoly_decrypt_integrity (mpl : MultiPlacement) (hpl : chachapolyLib.Placeable mpl) :
+    subroutine_ok (chachapolyLib.blockProgram mpl 5)
+      (chachapolyLib.fnAddr mpl decryptSym)
+      (chachapolyLib.withCodeLoaded mpl (aeadDecryptIntegrityContract (mpl.ρ sigmaDataSym))) :=
+  Proofs.decryptIntegrity_of_contract (chachapoly_decrypt_refines mpl hpl)
+
+set_option maxRecDepth 200000 in
 /-- **Poly1305 block step (machine code).** For every placement of the library, the AArch64
     code of RustCrypto's `State::compute_block` (called with `partial = false`) satisfies
     `polyBlockContract`: the accumulator becomes `(acc + block ‖ 0x01) * r mod 2^130 - 5`,

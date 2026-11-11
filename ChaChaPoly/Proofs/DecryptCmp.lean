@@ -76,6 +76,35 @@ theorem list_beq16 (T t : Bytes) (hT : T.length = 16) (ht : t.length = 16) :
     | 15, _ => exact h15
     | n + 16, h => omega
 
+/-! Normal forms of the comparison's AND chain over the `0`/`1` bytes `black_box` returns. -/
+
+theorem bb_and (p q : Bool) :
+    (BitVec.zeroExtend 64 (BitVec.zeroExtend 8 (BitVec.ofBool p)) &&&
+      BitVec.zeroExtend 64 (BitVec.zeroExtend 8 (BitVec.ofBool q))) =
+      BitVec.zeroExtend 64 (BitVec.zeroExtend 8 (BitVec.ofBool (p && q))) := by
+  cases p <;> cases q <;> rfl
+
+theorem bb_and32 (p q : Bool) :
+    (BitVec.truncate 32 (BitVec.zeroExtend 64 (BitVec.zeroExtend 8 (BitVec.ofBool p))) &&&
+      BitVec.truncate 32 (BitVec.zeroExtend 64 (BitVec.zeroExtend 8 (BitVec.ofBool q)))) =
+      BitVec.truncate 32 (BitVec.zeroExtend 64 (BitVec.zeroExtend 8 (BitVec.ofBool (p && q)))) := by
+  cases p <;> cases q <;> rfl
+
+theorem bb_trunc (p : Bool) :
+    BitVec.zeroExtend 64 (BitVec.truncate 32 (BitVec.zeroExtend 64 (BitVec.zeroExtend 8 (BitVec.ofBool p)))) =
+      BitVec.zeroExtend 64 (BitVec.zeroExtend 8 (BitVec.ofBool p)) := by
+  cases p <;> rfl
+
+theorem bb_one (p : Bool) :
+    (BitVec.zeroExtend 64 (BitVec.zeroExtend 8 (BitVec.ofBool p)) &&& 1#64) =
+      BitVec.zeroExtend 64 (BitVec.zeroExtend 8 (BitVec.ofBool p)) := by
+  cases p <;> rfl
+
+theorem bb_t8 (p : Bool) :
+    BitVec.truncate 8 (BitVec.zeroExtend 64 (BitVec.zeroExtend 8 (BitVec.ofBool p))) =
+      BitVec.zeroExtend 8 (BitVec.ofBool p) := by
+  cases p <;> rfl
+
 /-- What decrypt's tag comparison (`0x3fc`–`0x594`) leaves unchanged, and its result in `x0`. -/
 def dcmpPost (sm sf : Arm64.State) (fp : BitVec 64) (T t : Bytes) : Prop :=
   sf.sp = sm.sp ∧ sf.readReg64 .x19 = sm.readReg64 .x19 ∧ sf.readReg64 .x23 = sm.readReg64 .x23 ∧
@@ -821,7 +850,7 @@ theorem dcmp_ok [CpPlacement] (F : SepProp) (sm : Arm64.State) (tg fp : BitVec 6
   · intro R hm
     simp only [MultiPlacedLib.withCodeLoaded, blackBoxContract]
     simp only [wp_norm, arm64_norm, sepConj_assoc, satisfies_pure_sepConj, cset_eqb, stackFrame] at hm hcl16 ⊢
-    refine ⟨⟨by (try simp only [wp_norm, arm64_norm, *]); rw [list_beq16 T t hT ht]; generalize (T.getD 0 0 == t.getD 0 0) = b0; generalize (T.getD 1 0 == t.getD 1 0) = b1; generalize (T.getD 2 0 == t.getD 2 0) = b2; generalize (T.getD 3 0 == t.getD 3 0) = b3; generalize (T.getD 4 0 == t.getD 4 0) = b4; generalize (T.getD 5 0 == t.getD 5 0) = b5; generalize (T.getD 6 0 == t.getD 6 0) = b6; generalize (T.getD 7 0 == t.getD 7 0) = b7; generalize (T.getD 8 0 == t.getD 8 0) = b8; generalize (T.getD 9 0 == t.getD 9 0) = b9; generalize (T.getD 10 0 == t.getD 10 0) = b10; generalize (T.getD 11 0 == t.getD 11 0) = b11; generalize (T.getD 12 0 == t.getD 12 0) = b12; generalize (T.getD 13 0 == t.getD 13 0) = b13; generalize (T.getD 14 0 == t.getD 14 0) = b14; generalize (T.getD 15 0 == t.getD 15 0) = b15; bv_decide, hcl16⟩, ?_⟩
+    refine ⟨⟨by (try simp only [wp_norm, arm64_norm, *]); rw [list_beq16 T t hT ht]; generalize (T.getD 0 0 == t.getD 0 0) = b0; generalize (T.getD 1 0 == t.getD 1 0) = b1; generalize (T.getD 2 0 == t.getD 2 0) = b2; generalize (T.getD 3 0 == t.getD 3 0) = b3; generalize (T.getD 4 0 == t.getD 4 0) = b4; generalize (T.getD 5 0 == t.getD 5 0) = b5; generalize (T.getD 6 0 == t.getD 6 0) = b6; generalize (T.getD 7 0 == t.getD 7 0) = b7; generalize (T.getD 8 0 == t.getD 8 0) = b8; generalize (T.getD 9 0 == t.getD 9 0) = b9; generalize (T.getD 10 0 == t.getD 10 0) = b10; generalize (T.getD 11 0 == t.getD 11 0) = b11; generalize (T.getD 12 0 == t.getD 12 0) = b12; generalize (T.getD 13 0 == t.getD 13 0) = b13; generalize (T.getD 14 0 == t.getD 14 0) = b14; generalize (T.getD 15 0 == t.getD 15 0) = b15; simp only [bb_and, bb_and32, bb_trunc, bb_one, bb_t8, Bool.and_assoc], hcl16⟩, ?_⟩
     simp only [← sepConj_assoc] at hm ⊢
     refine Satisfies.mono (sepConj_mono_left ?_) hm
     simp only [sepConj_assoc]

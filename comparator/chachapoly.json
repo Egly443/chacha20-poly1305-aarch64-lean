@@ -6,6 +6,8 @@
     "ChaChaPoly.Theorems.chacha20_block_refines",
     "ChaChaPoly.Theorems.apply_keystream_refines",
     "ChaChaPoly.Theorems.chachapoly_encrypt_refines",
+    "ChaChaPoly.Theorems.chachapoly_decrypt_refines",
+    "ChaChaPoly.Theorems.chachapoly_decrypt_integrity",
     "ChaChaPoly.Theorems.poly1305_block_refines",
     "ChaChaPoly.Theorems.poly1305_finalize_refines",
     "ChaChaPoly.Theorems.poly1305_new_refines",

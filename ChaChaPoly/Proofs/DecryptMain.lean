@@ -1,9 +1,28 @@
-import ChaChaPoly.Proofs
+module
+
+public import ChaChaPoly.Proofs.Decrypt
+
+/-!
+# `chachapoly_decrypt` (block 5): the whole entry point
+
+Prologue and inlined `ChaCha20Poly1305::new`, the Poly1305 key from `apply_keystream` on 32 zero
+bytes, `Poly1305::new`, the length guard, the AAD and ciphertext Poly1305 passes
+(`DecryptMac.lean`), then `decTail_ok` (`Decrypt.lean`): the length block, `finalize`, the
+constant-time tag comparison (`DecryptCmp.lean`), decryption by `apply_keystream` only if the tags
+agree, the drop glue, the key zeroisation and the epilogue.
+-/
+
+@[expose] public section
+
+namespace ChaChaPoly.Proofs
+
 open Arm64 Arm64.Obj ProofLib ProofLib.ProgramReflection ProofLib.GenPlacedFetches
-open ChaChaPoly ChaChaPoly.Spec ChaChaPoly.Proofs
+open ChaChaPoly ChaChaPoly.Spec
+
 set_option maxRecDepth 200000
 set_option maxHeartbeats 8000000
 set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 arm64_proof_prelude
 
 /-- Open a `1168`-byte stack frame into the typed cells the function uses. -/
@@ -140,269 +159,9 @@ theorem SepWP.decFrame {prog : Program} {t : BitVec 64} {s : Arm64.State} {P F :
   repeat (apply SepWP.exists_elim; intro _)
   exact h ..
 
-theorem decFrame_fold (b : BitVec 64) (v1 : BitVec 32) (v2 : BitVec 8) (v4 : BitVec 8) (v6 : BitVec 8) (v8 : BitVec 8) (v10 : BitVec 8) (v12 : BitVec 8) (v14 : BitVec 8) (v16 : BitVec 8) (v18 : BitVec 8) (v20 : BitVec 8) (v22 : BitVec 8) (v24 : BitVec 8) (v26 : BitVec 8) (v28 : BitVec 8) (v30 : BitVec 8) (v32 : BitVec 8) (v34 : BitVec 8) (v36 : BitVec 8) (v38 : BitVec 8) (v40 : BitVec 8) (v42 : BitVec 8) (v44 : BitVec 8) (v46 : BitVec 8) (v48 : BitVec 8) (v50 : BitVec 8) (v52 : BitVec 8) (v54 : BitVec 8) (v56 : BitVec 8) (v58 : BitVec 8) (v60 : BitVec 8) (v62 : BitVec 8) (v64 : BitVec 8) (v70 : BitVec 8) (v71 : BitVec 8) (v72 : BitVec 8) (v73 : BitVec 8) (v74 : BitVec 8) (v75 : BitVec 8) (v76 : BitVec 8) (v77 : BitVec 8) (v78 : BitVec 8) (v79 : BitVec 8) (v80 : BitVec 8) (v81 : BitVec 8) (v82 : BitVec 8) (v83 : BitVec 8) (v84 : BitVec 8) (v85 : BitVec 8) (v86 : BitVec 8) (v87 : BitVec 8) (v88 : BitVec 8) (v89 : BitVec 8) (v90 : BitVec 8) (v91 : BitVec 8) (v92 : BitVec 8) (v93 : BitVec 8) (v94 : BitVec 8) (v95 : BitVec 8) (v96 : BitVec 8) (v97 : BitVec 8) (v98 : BitVec 8) (v99 : BitVec 8) (v100 : BitVec 8) (v101 : BitVec 8) (v102 : BitVec 32) (v103 : BitVec 64) (v104 : BitVec 32) (v106 : BitVec 8) (v110 : BitVec 64) (v111 : BitVec 64) (v112 : BitVec 64) (v113 : BitVec 64) (v114 : BitVec 64) (v115 : BitVec 64) (v116 : BitVec 64) (v117 : BitVec 64) (v118 : BitVec 64) (v119 : BitVec 64) (v120 : BitVec 64) (v121 : BitVec 64) :
-    (memRegion b 560 ∗
-      ((b + 560#64) ↦₃₂ v1) ∗
-      ((b + 564#64) ↦₈ v2) ∗
-      memRegion (b + 565#64) 3 ∗
-      ((b + 568#64) ↦₈ v4) ∗
-      memRegion (b + 569#64) 3 ∗
-      ((b + 572#64) ↦₈ v6) ∗
-      memRegion (b + 573#64) 3 ∗
-      ((b + 576#64) ↦₈ v8) ∗
-      memRegion (b + 577#64) 3 ∗
-      ((b + 580#64) ↦₈ v10) ∗
-      memRegion (b + 581#64) 3 ∗
-      ((b + 584#64) ↦₈ v12) ∗
-      memRegion (b + 585#64) 3 ∗
-      ((b + 588#64) ↦₈ v14) ∗
-      memRegion (b + 589#64) 3 ∗
-      ((b + 592#64) ↦₈ v16) ∗
-      memRegion (b + 593#64) 3 ∗
-      ((b + 596#64) ↦₈ v18) ∗
-      memRegion (b + 597#64) 3 ∗
-      ((b + 600#64) ↦₈ v20) ∗
-      memRegion (b + 601#64) 3 ∗
-      ((b + 604#64) ↦₈ v22) ∗
-      memRegion (b + 605#64) 3 ∗
-      ((b + 608#64) ↦₈ v24) ∗
-      memRegion (b + 609#64) 3 ∗
-      ((b + 612#64) ↦₈ v26) ∗
-      memRegion (b + 613#64) 3 ∗
-      ((b + 616#64) ↦₈ v28) ∗
-      memRegion (b + 617#64) 3 ∗
-      ((b + 620#64) ↦₈ v30) ∗
-      memRegion (b + 621#64) 3 ∗
-      ((b + 624#64) ↦₈ v32) ∗
-      memRegion (b + 625#64) 3 ∗
-      ((b + 628#64) ↦₈ v34) ∗
-      memRegion (b + 629#64) 3 ∗
-      ((b + 632#64) ↦₈ v36) ∗
-      memRegion (b + 633#64) 3 ∗
-      ((b + 636#64) ↦₈ v38) ∗
-      memRegion (b + 637#64) 3 ∗
-      ((b + 640#64) ↦₈ v40) ∗
-      memRegion (b + 641#64) 3 ∗
-      ((b + 644#64) ↦₈ v42) ∗
-      memRegion (b + 645#64) 3 ∗
-      ((b + 648#64) ↦₈ v44) ∗
-      memRegion (b + 649#64) 3 ∗
-      ((b + 652#64) ↦₈ v46) ∗
-      memRegion (b + 653#64) 3 ∗
-      ((b + 656#64) ↦₈ v48) ∗
-      memRegion (b + 657#64) 3 ∗
-      ((b + 660#64) ↦₈ v50) ∗
-      memRegion (b + 661#64) 3 ∗
-      ((b + 664#64) ↦₈ v52) ∗
-      memRegion (b + 665#64) 3 ∗
-      ((b + 668#64) ↦₈ v54) ∗
-      memRegion (b + 669#64) 3 ∗
-      ((b + 672#64) ↦₈ v56) ∗
-      memRegion (b + 673#64) 3 ∗
-      ((b + 676#64) ↦₈ v58) ∗
-      memRegion (b + 677#64) 3 ∗
-      ((b + 680#64) ↦₈ v60) ∗
-      memRegion (b + 681#64) 3 ∗
-      ((b + 684#64) ↦₈ v62) ∗
-      memRegion (b + 685#64) 3 ∗
-      ((b + 688#64) ↦₈ v64) ∗
-      memRegion (b + 689#64) 3 ∗
-      memRegion (b + 692#64) 56 ∗
-      memRegion (b + 748#64) 129 ∗
-      memRegion (b + 877#64) 3 ∗
-      memRegion (b + 880#64) 16 ∗
-      ((b + 896#64) ↦₈ v70) ∗
-      ((b + 897#64) ↦₈ v71) ∗
-      ((b + 898#64) ↦₈ v72) ∗
-      ((b + 899#64) ↦₈ v73) ∗
-      ((b + 900#64) ↦₈ v74) ∗
-      ((b + 901#64) ↦₈ v75) ∗
-      ((b + 902#64) ↦₈ v76) ∗
-      ((b + 903#64) ↦₈ v77) ∗
-      ((b + 904#64) ↦₈ v78) ∗
-      ((b + 905#64) ↦₈ v79) ∗
-      ((b + 906#64) ↦₈ v80) ∗
-      ((b + 907#64) ↦₈ v81) ∗
-      ((b + 908#64) ↦₈ v82) ∗
-      ((b + 909#64) ↦₈ v83) ∗
-      ((b + 910#64) ↦₈ v84) ∗
-      ((b + 911#64) ↦₈ v85) ∗
-      ((b + 912#64) ↦₈ v86) ∗
-      ((b + 913#64) ↦₈ v87) ∗
-      ((b + 914#64) ↦₈ v88) ∗
-      ((b + 915#64) ↦₈ v89) ∗
-      ((b + 916#64) ↦₈ v90) ∗
-      ((b + 917#64) ↦₈ v91) ∗
-      ((b + 918#64) ↦₈ v92) ∗
-      ((b + 919#64) ↦₈ v93) ∗
-      ((b + 920#64) ↦₈ v94) ∗
-      ((b + 921#64) ↦₈ v95) ∗
-      ((b + 922#64) ↦₈ v96) ∗
-      ((b + 923#64) ↦₈ v97) ∗
-      ((b + 924#64) ↦₈ v98) ∗
-      ((b + 925#64) ↦₈ v99) ∗
-      ((b + 926#64) ↦₈ v100) ∗
-      ((b + 927#64) ↦₈ v101) ∗
-      ((b + 928#64) ↦₃₂ v102) ∗
-      ((b + 932#64) ↦₆₄ v103) ∗
-      ((b + 940#64) ↦₃₂ v104) ∗
-      memRegion (b + 944#64) 64 ∗
-      ((b + 1008#64) ↦₈ v106) ∗
-      memRegion (b + 1009#64) 15 ∗
-      memRegion (b + 1024#64) 32 ∗
-      memRegion (b + 1056#64) 16 ∗
-      ((b + 1072#64) ↦₆₄ v110) ∗
-      ((b + 1080#64) ↦₆₄ v111) ∗
-      ((b + 1088#64) ↦₆₄ v112) ∗
-      ((b + 1096#64) ↦₆₄ v113) ∗
-      ((b + 1104#64) ↦₆₄ v114) ∗
-      ((b + 1112#64) ↦₆₄ v115) ∗
-      ((b + 1120#64) ↦₆₄ v116) ∗
-      ((b + 1128#64) ↦₆₄ v117) ∗
-      ((b + 1136#64) ↦₆₄ v118) ∗
-      ((b + 1144#64) ↦₆₄ v119) ∗
-      ((b + 1152#64) ↦₆₄ v120) ∗
-      ((b + 1160#64) ↦₆₄ v121)) ⊢ memRegion b 1168 := by
-  rw [memRegion_partition b 1168 [560, 564, 565, 568, 569, 572, 573, 576, 577, 580, 581, 584, 585, 588, 589, 592, 593, 596, 597, 600, 601, 604, 605, 608, 609, 612, 613, 616, 617, 620, 621, 624, 625, 628, 629, 632, 633, 636, 637, 640, 641, 644, 645, 648, 649, 652, 653, 656, 657, 660, 661, 664, 665, 668, 669, 672, 673, 676, 677, 680, 681, 684, 685, 688, 689, 692, 748, 877, 880, 896, 897, 898, 899, 900, 901, 902, 903, 904, 905, 906, 907, 908, 909, 910, 911, 912, 913, 914, 915, 916, 917, 918, 919, 920, 921, 922, 923, 924, 925, 926, 927, 928, 932, 940, 944, 1008, 1009, 1024, 1056, 1072, 1080, 1088, 1096, 1104, 1112, 1120, 1128, 1136, 1144, 1152, 1160]]
-  repeat' (first
-    | exact Entails.refl _
-    | exact pointsTo64_entails_memRegion _ _
-    | exact pointsTo32_entails_memRegion _ _
-    | exact pointsTo8_entails_memRegion _ _
-    | refine sepConj_mono ?_ ?_)
-
-/-- Fold the typed cells of a `1168`-byte stack frame back into one region. -/
-theorem SepWP.decFrame_close {prog : Program} {t : BitVec 64} {s : Arm64.State} {P F : SepProp}
-    {post : Arm64.State → SepProp → Prop} {oom : Arm64.State → SepProp} (b : BitVec 64)
-    {v1 : BitVec 32} {v2 : BitVec 8} {v4 : BitVec 8} {v6 : BitVec 8} {v8 : BitVec 8} {v10 : BitVec 8} {v12 : BitVec 8} {v14 : BitVec 8} {v16 : BitVec 8} {v18 : BitVec 8} {v20 : BitVec 8} {v22 : BitVec 8} {v24 : BitVec 8} {v26 : BitVec 8} {v28 : BitVec 8} {v30 : BitVec 8} {v32 : BitVec 8} {v34 : BitVec 8} {v36 : BitVec 8} {v38 : BitVec 8} {v40 : BitVec 8} {v42 : BitVec 8} {v44 : BitVec 8} {v46 : BitVec 8} {v48 : BitVec 8} {v50 : BitVec 8} {v52 : BitVec 8} {v54 : BitVec 8} {v56 : BitVec 8} {v58 : BitVec 8} {v60 : BitVec 8} {v62 : BitVec 8} {v64 : BitVec 8} {v70 : BitVec 8} {v71 : BitVec 8} {v72 : BitVec 8} {v73 : BitVec 8} {v74 : BitVec 8} {v75 : BitVec 8} {v76 : BitVec 8} {v77 : BitVec 8} {v78 : BitVec 8} {v79 : BitVec 8} {v80 : BitVec 8} {v81 : BitVec 8} {v82 : BitVec 8} {v83 : BitVec 8} {v84 : BitVec 8} {v85 : BitVec 8} {v86 : BitVec 8} {v87 : BitVec 8} {v88 : BitVec 8} {v89 : BitVec 8} {v90 : BitVec 8} {v91 : BitVec 8} {v92 : BitVec 8} {v93 : BitVec 8} {v94 : BitVec 8} {v95 : BitVec 8} {v96 : BitVec 8} {v97 : BitVec 8} {v98 : BitVec 8} {v99 : BitVec 8} {v100 : BitVec 8} {v101 : BitVec 8} {v102 : BitVec 32} {v103 : BitVec 64} {v104 : BitVec 32} {v106 : BitVec 8} {v110 : BitVec 64} {v111 : BitVec 64} {v112 : BitVec 64} {v113 : BitVec 64} {v114 : BitVec 64} {v115 : BitVec 64} {v116 : BitVec 64} {v117 : BitVec 64} {v118 : BitVec 64} {v119 : BitVec 64} {v120 : BitVec 64} {v121 : BitVec 64}
-    (hf : P ⊢ (memRegion b 560 ∗
-      ((b + 560#64) ↦₃₂ v1) ∗
-      ((b + 564#64) ↦₈ v2) ∗
-      memRegion (b + 565#64) 3 ∗
-      ((b + 568#64) ↦₈ v4) ∗
-      memRegion (b + 569#64) 3 ∗
-      ((b + 572#64) ↦₈ v6) ∗
-      memRegion (b + 573#64) 3 ∗
-      ((b + 576#64) ↦₈ v8) ∗
-      memRegion (b + 577#64) 3 ∗
-      ((b + 580#64) ↦₈ v10) ∗
-      memRegion (b + 581#64) 3 ∗
-      ((b + 584#64) ↦₈ v12) ∗
-      memRegion (b + 585#64) 3 ∗
-      ((b + 588#64) ↦₈ v14) ∗
-      memRegion (b + 589#64) 3 ∗
-      ((b + 592#64) ↦₈ v16) ∗
-      memRegion (b + 593#64) 3 ∗
-      ((b + 596#64) ↦₈ v18) ∗
-      memRegion (b + 597#64) 3 ∗
-      ((b + 600#64) ↦₈ v20) ∗
-      memRegion (b + 601#64) 3 ∗
-      ((b + 604#64) ↦₈ v22) ∗
-      memRegion (b + 605#64) 3 ∗
-      ((b + 608#64) ↦₈ v24) ∗
-      memRegion (b + 609#64) 3 ∗
-      ((b + 612#64) ↦₈ v26) ∗
-      memRegion (b + 613#64) 3 ∗
-      ((b + 616#64) ↦₈ v28) ∗
-      memRegion (b + 617#64) 3 ∗
-      ((b + 620#64) ↦₈ v30) ∗
-      memRegion (b + 621#64) 3 ∗
-      ((b + 624#64) ↦₈ v32) ∗
-      memRegion (b + 625#64) 3 ∗
-      ((b + 628#64) ↦₈ v34) ∗
-      memRegion (b + 629#64) 3 ∗
-      ((b + 632#64) ↦₈ v36) ∗
-      memRegion (b + 633#64) 3 ∗
-      ((b + 636#64) ↦₈ v38) ∗
-      memRegion (b + 637#64) 3 ∗
-      ((b + 640#64) ↦₈ v40) ∗
-      memRegion (b + 641#64) 3 ∗
-      ((b + 644#64) ↦₈ v42) ∗
-      memRegion (b + 645#64) 3 ∗
-      ((b + 648#64) ↦₈ v44) ∗
-      memRegion (b + 649#64) 3 ∗
-      ((b + 652#64) ↦₈ v46) ∗
-      memRegion (b + 653#64) 3 ∗
-      ((b + 656#64) ↦₈ v48) ∗
-      memRegion (b + 657#64) 3 ∗
-      ((b + 660#64) ↦₈ v50) ∗
-      memRegion (b + 661#64) 3 ∗
-      ((b + 664#64) ↦₈ v52) ∗
-      memRegion (b + 665#64) 3 ∗
-      ((b + 668#64) ↦₈ v54) ∗
-      memRegion (b + 669#64) 3 ∗
-      ((b + 672#64) ↦₈ v56) ∗
-      memRegion (b + 673#64) 3 ∗
-      ((b + 676#64) ↦₈ v58) ∗
-      memRegion (b + 677#64) 3 ∗
-      ((b + 680#64) ↦₈ v60) ∗
-      memRegion (b + 681#64) 3 ∗
-      ((b + 684#64) ↦₈ v62) ∗
-      memRegion (b + 685#64) 3 ∗
-      ((b + 688#64) ↦₈ v64) ∗
-      memRegion (b + 689#64) 3 ∗
-      memRegion (b + 692#64) 56 ∗
-      memRegion (b + 748#64) 129 ∗
-      memRegion (b + 877#64) 3 ∗
-      memRegion (b + 880#64) 16 ∗
-      ((b + 896#64) ↦₈ v70) ∗
-      ((b + 897#64) ↦₈ v71) ∗
-      ((b + 898#64) ↦₈ v72) ∗
-      ((b + 899#64) ↦₈ v73) ∗
-      ((b + 900#64) ↦₈ v74) ∗
-      ((b + 901#64) ↦₈ v75) ∗
-      ((b + 902#64) ↦₈ v76) ∗
-      ((b + 903#64) ↦₈ v77) ∗
-      ((b + 904#64) ↦₈ v78) ∗
-      ((b + 905#64) ↦₈ v79) ∗
-      ((b + 906#64) ↦₈ v80) ∗
-      ((b + 907#64) ↦₈ v81) ∗
-      ((b + 908#64) ↦₈ v82) ∗
-      ((b + 909#64) ↦₈ v83) ∗
-      ((b + 910#64) ↦₈ v84) ∗
-      ((b + 911#64) ↦₈ v85) ∗
-      ((b + 912#64) ↦₈ v86) ∗
-      ((b + 913#64) ↦₈ v87) ∗
-      ((b + 914#64) ↦₈ v88) ∗
-      ((b + 915#64) ↦₈ v89) ∗
-      ((b + 916#64) ↦₈ v90) ∗
-      ((b + 917#64) ↦₈ v91) ∗
-      ((b + 918#64) ↦₈ v92) ∗
-      ((b + 919#64) ↦₈ v93) ∗
-      ((b + 920#64) ↦₈ v94) ∗
-      ((b + 921#64) ↦₈ v95) ∗
-      ((b + 922#64) ↦₈ v96) ∗
-      ((b + 923#64) ↦₈ v97) ∗
-      ((b + 924#64) ↦₈ v98) ∗
-      ((b + 925#64) ↦₈ v99) ∗
-      ((b + 926#64) ↦₈ v100) ∗
-      ((b + 927#64) ↦₈ v101) ∗
-      ((b + 928#64) ↦₃₂ v102) ∗
-      ((b + 932#64) ↦₆₄ v103) ∗
-      ((b + 940#64) ↦₃₂ v104) ∗
-      memRegion (b + 944#64) 64 ∗
-      ((b + 1008#64) ↦₈ v106) ∗
-      memRegion (b + 1009#64) 15 ∗
-      memRegion (b + 1024#64) 32 ∗
-      memRegion (b + 1056#64) 16 ∗
-      ((b + 1072#64) ↦₆₄ v110) ∗
-      ((b + 1080#64) ↦₆₄ v111) ∗
-      ((b + 1088#64) ↦₆₄ v112) ∗
-      ((b + 1096#64) ↦₆₄ v113) ∗
-      ((b + 1104#64) ↦₆₄ v114) ∗
-      ((b + 1112#64) ↦₆₄ v115) ∗
-      ((b + 1120#64) ↦₆₄ v116) ∗
-      ((b + 1128#64) ↦₆₄ v117) ∗
-      ((b + 1136#64) ↦₆₄ v118) ∗
-      ((b + 1144#64) ↦₆₄ v119) ∗
-      ((b + 1152#64) ↦₆₄ v120) ∗
-      ((b + 1160#64) ↦₆₄ v121)) ∗ F)
-    (h : SepWP prog t s (memRegion b 1168 ∗ F) post oom) :
-    SepWP prog t s P post oom :=
-  SepWP.weaken_pre (Entails.trans hf (sepConj_mono_left (decFrame_fold b ..))) h
-
 set_option maxRecDepth 400000 in
-theorem decrypt_draft [CpPlacement] :
+/-- `chachapoly_decrypt` meets `aeadDecryptContract` for the library's ChaCha constant. -/
+theorem decrypt_ok [CpPlacement] :
     subroutine_ok cpProg5r cpPl5.base
       (chachapolyLib.withCodeLoaded cpMpl (aeadDecryptContract (cpMpl.ρ sigmaSym))) := by
   dsimp only [MultiPlacedLib.withCodeLoaded, aeadDecryptContract, aeadPre]
@@ -544,8 +303,8 @@ theorem decrypt_draft [CpPlacement] :
       refine SepWP.weaken_pre hQ3 ?_
       refine SepWP.exists_elim fun l1 => SepWP.exists_elim fun blk1 => ?_
       refine SepWP.pure_elim fun ⟨hl1, hblk1⟩ => ?_
-      obtain ⟨k1s, k19, k21, k22, k23, k25, k29, kv⟩ := hk3
-      simp only [wp_norm, arm64_norm] at k1s k19 k21 k22 k23 k25 k29 kv
+      obtain ⟨k1s, k19, k21, k22, k23, k24, k25, k29, kv⟩ := hk3
+      simp only [wp_norm, arm64_norm] at k1s k19 k21 k22 k23 k24 k25 k29 kv
       refine MultiPlacedLib.seq_codeLoaded (mid := cpPl5.base + 0x3c4#64) hcl4 ?_
       refine SepWP.mono (SepWP.weaken_pre ?_ (dmacCt_ok ?FC _ buf (s0.sp - 288#64)
         msg blk1 (clamp (leNat (mk.take 16)))
@@ -563,7 +322,28 @@ theorem decrypt_draft [CpPlacement] :
       refine SepWP.weaken_pre hQ5 ?_
       refine SepWP.exists_elim fun l2 => SepWP.exists_elim fun blk2 => ?_
       refine SepWP.pure_elim fun ⟨hl2, hblk2⟩ => ?_
-      obtain ⟨g1, g19, g21, g22, g24, g25, g29, gv⟩ := hk5
-      simp only [wp_norm, arm64_norm] at g1 g19 g21 g22 g24 g25 g29 gv
-      trace_state
-      sorry
+      obtain ⟨g1, g19, g21, g22, g23, g24, g25, g29, gv⟩ := hk5
+      simp only [wp_norm, arm64_norm] at g1 g19 g21 g22 g23 g24 g25 g29 gv
+      rw [pair_copy q0 sb 0 8 rfl hq0 (by omega), pair_copy q1 sb 16 24 rfl hq1 (by omega),
+        pair_copy q2 _ 32 40 rfl hq2 (by omega), pair_copy q3 _ 48 56 rfl hq3 (by omega),
+        pair_copy q4 kbb 0 8 rfl hq4 (by omega), pair_copy q5 kbb 16 24 rfl hq5 (by omega),
+        pair_copy q6 kbb 32 40 rfl hq6 (by omega), pair_copy q7 kbb 48 56 rfl hq7 (by omega),
+        quad_pack qp _ _ _ _ hqp, ← slice_write32_lo sb 0 (by omega) hsl,
+        ← slice_write32_lo sb 16 (by omega) hsl]
+      refine Proofs.SepWP.foldPart (Entails.of_eq_explicit (four_slices (s0.sp - 420#64) _ hsbl))
+        (by sep_focus) ?_
+      refine Proofs.SepWP.foldPart (Entails.of_eq_explicit (four_slices (s0.sp - 356#64) _ hkbl))
+        (by sep_focus) ?_
+      rw [← hsbeq, advance1_bytes, ← stateAt_eq_bytes, ← hkbeq, ← stateAt_eq_bytes]
+      have hw8 : ByteSlice.write8 (32#8 :: pr) 0 0#8 = 0#8 :: pr := rfl
+      simp only [hw8, List.getD_cons_zero, List.getD_cons_succ]
+      rw [pointsToBytes_cons]
+      rw [show sf3.sp + 132#64 = s0.sp - 476#64 by rw [k1s, hspf2]; bv_omega]
+      exact decTail_ok s0 sf5 R k n a msg t mk pr blk2 key nonce aad buf tag pw kb l2 _ hpc5 hrun5 hcl6
+        (by rw [g1, k1s, hspf2]) hsp_align
+        (by rw [g19, k19, d19]) (by rw [g21, k21, d21]) (by simp [wp_norm, arm64_norm, g23, k22, d20])
+        (by simp [wp_norm, arm64_norm, g24, k24, d27]) (by rw [g25, k25, d25]) (by rw [g29, k29, d29])
+        (by rw [gv, kv, dv]) (by assumption) (by assumption) (by assumption) (by assumption)
+        (by assumption) hmkl (by assumption) hblk2 hmkeq hpw hl2
+
+end ChaChaPoly.Proofs
