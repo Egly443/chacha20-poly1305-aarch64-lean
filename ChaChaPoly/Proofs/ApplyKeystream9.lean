@@ -46,7 +46,7 @@ theorem tailSeg_ok [CpPlacement] (sm : Arm64.State) (c bufp : BitVec 64) (s buf 
       (stateAt c s ∗ stateAt (c + 0x40#64) buf ∗ ((bufp + BitVec.ofNat 64 (64 * nb)) ↦ₛ T) ∗
         memRegion (sm.sp - 0x90#64) 0x90 ∗ F)
       (sepPost (fun sm' => sm'.sp = sm.sp ∧ sm'.readReg64 .x21 = c ∧
-          sm'.readReg64 .x22 = BitVec.ofNat 64 T.length)
+          sm'.readReg64 .x22 = BitVec.ofNat 64 T.length ∧ calleeSavedVRegs sm' = calleeSavedVRegs sm)
         (stateAt c { s with x12 := s.x12 + 1 } ∗ stateAt (c + 0x40#64) ((iter doubleRound 10 s).add s) ∗
           ((bufp + BitVec.ofNat 64 (64 * nb)) ↦ₛ xorBytes T (stateBlock s)) ∗
           memRegion (sm.sp - 0x90#64) 0x90 ∗ F)) := by
@@ -69,7 +69,7 @@ theorem tailSeg_ok [CpPlacement] (sm : Arm64.State) (c bufp : BitVec 64) (s buf 
     exact Satisfies.of_entails hm (by sep_entail)
   · intro sf hpcf hrunf hspf hcsf
     simp only [MultiPlacedLib.withCodeLoaded, chachaBlockSpec, stackFrame, wp_norm, arm64_norm] at hspf ⊢
-    obtain ⟨c19, c20, c21, c22, -⟩ := hcsf
+    obtain ⟨c19, c20, c21, c22, -, -, -, -, -, -, -, cv⟩ := hcsf
     simp only [wp_norm, arm64_norm] at c19 c20 c21 c22
     show SepWP cpProg4r _ _ _ _ _
     wp_step
@@ -85,7 +85,8 @@ theorem tailSeg_ok [CpPlacement] (sm : Arm64.State) (c bufp : BitVec 64) (s buf 
     simp only [sepPostState, sepPost] at hst ⊢
     obtain ⟨hk, hm'⟩ := hst
     simp only [tailKeeps, wp_norm, arm64_norm] at hk
-    refine ⟨⟨by rw [hk.1, hspf], by rw [hk.2.1, c21, h21], by rw [hk.2.2.1, c22, h22]⟩,
+    refine ⟨⟨by rw [hk.1, hspf], by rw [hk.2.1, c21, h21], by rw [hk.2.2.1, c22, h22],
+      by rw [hk.2.2.2.2]; simpa [wp_norm, arm64_norm] using cv⟩,
       Entails.trans hm' (by unfold stateBlock; sep_entail)⟩
 
 end ChaChaPoly.Proofs

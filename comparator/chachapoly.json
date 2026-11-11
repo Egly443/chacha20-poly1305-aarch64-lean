@@ -4,6 +4,7 @@
   "theorem_names": [
     "ChaChaPoly.Theorems.chachapoly_linked_in",
     "ChaChaPoly.Theorems.chacha20_block_refines",
+    "ChaChaPoly.Theorems.apply_keystream_refines",
     "ChaChaPoly.Theorems.poly1305_block_refines",
     "ChaChaPoly.Theorems.poly1305_finalize_refines",
     "ChaChaPoly.Theorems.poly1305_new_refines",

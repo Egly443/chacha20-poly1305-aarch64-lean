@@ -18,6 +18,7 @@ Proved, kernel-checked, no `sorry`, standard axioms only (`scripts/audit`):
 | --- | --- |
 | `chachapoly_linked_in` | The SHA-256-pinned ELF contains the extracted library (all 11 functions reachable from `chachapoly_encrypt` / `chachapoly_decrypt`) at a placement a standard static linker could produce. |
 | `chacha20_block_refines` | For every placement, the machine code of `ChaChaCore::write_keystream_block` (167 instructions) writes `(doubleRound^10 s) + s` and increments the block counter. No hooks. |
+| `apply_keystream_refines` | For every placement, the machine code of the stream-cipher wrapper `apply_keystream` (295 instructions: the per-block loop with the block function inlined, plus a `write_keystream_block` call for a final partial block) XORs the buffer in place with the RFC 8439 §2.4 key stream of the cipher state, advances the block counter by `⌈len/64⌉` and records `len mod 64` as the key-stream position. Precondition: position 0 on entry (true for the fresh cipher the entry points build) and no counter overflow (`⌈len/64⌉ + counter < 2^32`, the condition under which the code panics). No hooks. |
 | `poly1305_block_refines` | For every placement, the machine code of Poly1305's `State::compute_block` (74 instructions, `partial = false`) performs one RFC 8439 §2.5.1 step: the accumulator becomes `(acc + block‖0x01) · r mod 2^130 − 5`. No hooks. |
 | `poly1305_finalize_refines` | For every placement, the machine code of `Poly1305::finalize` (59 instructions, including the constant-time final reduction) writes the tag `(acc mod 2^130 − 5 + s) mod 2^128`. No hooks. |
 | `poly1305_new_refines` | For every placement, the machine code of `Poly1305::new` (24 instructions) builds a state representing `r = clamp(key[0..16])`, accumulator 0 and pad `key[16..32]`. The clamp is checked bit by bit by the kernel-checked ROBDD procedure. No hooks. |
@@ -30,8 +31,8 @@ Proved, kernel-checked, no `sorry`, standard axioms only (`scripts/audit`):
 
 Not yet proved:
 
-- Machine-code refinement of the stream-cipher wrapper `apply_keystream` and the two entry points
-  `chachapoly_encrypt` / `chachapoly_decrypt`.
+- Machine-code refinement of the two entry points `chachapoly_encrypt` / `chachapoly_decrypt`
+  (key setup, AAD/ciphertext MAC, tag comparison, and their `memcpy` / `memset` calls).
 - Consequently there is **no end-to-end theorem about the entry points yet**, and the symbolic
   integrity theorem is about the Lean construction, not yet transferred to the binary.
 

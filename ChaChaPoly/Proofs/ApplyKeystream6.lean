@@ -88,7 +88,8 @@ theorem outerStep_ok [CpPlacement] (sm : Arm64.State) (s : Spec.State) (tail len
           sm'.readReg64 .x10 = BitVec.ofNat 64 k + 1#64 ∧ sm'.readReg64 .x8 = n ∧
           sm'.pstate = subsPState64 n (BitVec.ofNat 64 k + 1#64) ∧
           sm'.readReg64 .x22 = sm.readReg64 .x22 ∧ sm'.readReg64 .x23 = sm.readReg64 .x23 ∧
-          sm'.readReg64 .x24 = sm.readReg64 .x24 ∧ sm'.readVReg128 0#5 = 0#128)
+          sm'.readReg64 .x24 = sm.readReg64 .x24 ∧ sm'.readVReg128 0#5 = 0#128 ∧
+          sm'.readReg64 .x1 = bufp ∧ calleeSavedVRegs sm' = calleeSavedVRegs sm)
         (akSlots sm.sp tail len c s n bufp (s.advance k).x12 ∗
           stateAt (sm.sp + 0x70#64) ((iter doubleRound 10 (s.advance k)).add (s.advance k)) ∗
           ((sm.sp + 0xb0#64) ↦ₛ blockOf data (64 * k)) ∗
@@ -159,7 +160,7 @@ theorem outerStep_ok [CpPlacement] (sm : Arm64.State) (s : Spec.State) (tail len
     f18, f22, f23, f24, f25, f26, f28, f30, fv0, fv⟩, hQ⟩
   refine ⟨⟨?_, fsp, by rw [f29, x329, h229, k129], f10, f8, fps,
     by rw [f22, x322, h222, k122], by rw [f23, x323, h223, k123], by rw [f24, x324, h224, k124],
-    by rw [fv0, x3v0, h2v0]⟩, ?_⟩
+    by rw [fv0, x3v0, h2v0], by rw [f1, x31, h21], by rw [fv, x3v, h2v, k1v]⟩, ?_⟩
   · unfold regsO
     rw [f0, f2, f6, f7, f14, f15, f16, f17, f18, f3, f4, f5, f27, f30, f28, f26, x30, x32, x36, x37,
       x314, x315, x316, x317, x318, x33, x34, x35, x330, x328, x326, r0, r1, r2, r3, r4, r5, r6, r7,

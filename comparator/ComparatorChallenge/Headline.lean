@@ -46,6 +46,20 @@ theorem chacha20_block_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Place
   sorry
 
 set_option maxRecDepth 200000 in
+/-- **ChaCha20 stream XOR (machine code).** For every placement of the library, the AArch64
+    code of RustCrypto's `StreamCipherCoreWrapper::apply_keystream` (295 instructions, with
+    the inlined block function and its `write_keystream_block` call for the tail) satisfies
+    `applyKeystreamContract`: started with key-stream position 0, it XORs the `len` data bytes in
+    place with the key stream of the cipher state `s` (`streamXor s data`), advances the block
+    counter by `⌈len / 64⌉` and leaves position `len mod 64`. The precondition excludes the
+    counter-overflow panic (`⌈len / 64⌉ + counter < 2^32`). No hooks. -/
+theorem apply_keystream_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Placeable mpl) :
+    subroutine_ok (chachapolyLib.blockProgram mpl 4)
+      (chachapolyLib.fnAddr mpl applyKeystreamSym)
+      (chachapolyLib.withCodeLoaded mpl applyKeystreamContract) :=
+  sorry
+
+set_option maxRecDepth 200000 in
 /-- **Poly1305 block step (machine code).** For every placement of the library, the AArch64
     code of RustCrypto's `State::compute_block` (called with `partial = false`) satisfies
     `polyBlockContract`: the accumulator becomes `(acc + block ‖ 0x01) * r mod 2^130 - 5`,

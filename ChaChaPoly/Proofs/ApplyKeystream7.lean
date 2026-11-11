@@ -75,7 +75,8 @@ theorem outerLoop_ok [CpPlacement] (sm : Arm64.State) (s : Spec.State) (tail len
     SepWP cpProg4r (cpPl4.base + 0x410#64) sm
       (akScratch sm.sp tail len c s (BitVec.ofNat 64 nb) bufp ∗ (bufp ↦ₛ data) ∗ F)
       (sepPost (fun sm' => sm'.readReg64 .x27 = BitVec.zeroExtend 64 (s.advance nb).x12 ∧
-          sm'.sp = sm.sp ∧ sm'.readReg64 .x29 = sm.readReg64 .x29)
+          sm'.sp = sm.sp ∧ sm'.readReg64 .x29 = sm.readReg64 .x29 ∧
+          sm'.readReg64 .x1 = bufp ∧ calleeSavedVRegs sm' = calleeSavedVRegs sm)
         (akScratch sm.sp tail len c s (BitVec.ofNat 64 nb) bufp ∗ (bufp ↦ₛ akCur s data nb) ∗ F)) := by
   have hcur0 : akCur s data 0 = data := by simp [akCur, streamXor_nil]
   refine SepWP.weaken_pre (P' := akScratch sm.sp tail len c s (BitVec.ofNat 64 nb) bufp ∗
@@ -84,7 +85,8 @@ theorem outerLoop_ok [CpPlacement] (sm : Arm64.State) (s : Spec.State) (tail len
     m ≤ nb - 1 ∧ regsO st (s.advance (nb - 1 - m)) ∧ st.sp = sm.sp ∧
       st.readReg64 .x10 = BitVec.ofNat 64 (nb - 1 - m) ∧ st.readReg64 .x29 = sm.readReg64 .x29 ∧
       st.readReg64 .x22 = sm.readReg64 .x22 ∧ st.readReg64 .x23 = sm.readReg64 .x23 ∧
-      st.readReg64 .x24 = sm.readReg64 .x24 ∧ st.readVReg128 0#5 = 0#128)
+      st.readReg64 .x24 = sm.readReg64 .x24 ∧ st.readVReg128 0#5 = 0#128 ∧
+      calleeSavedVRegs st = calleeSavedVRegs sm)
     (fun m _ => akScratch sm.sp tail len c s (BitVec.ofNat 64 nb) bufp ∗
       (bufp ↦ₛ akCur s data (nb - 1 - m)) ∗ F)
   all_goals first
@@ -98,6 +100,7 @@ theorem outerLoop_ok [CpPlacement] (sm : Arm64.State) (s : Spec.State) (tail len
     have e22 : st.readReg64 .x22 = sm.readReg64 .x22 := by assumption
     have e23 : st.readReg64 .x23 = sm.readReg64 .x23 := by assumption
     have e24 : st.readReg64 .x24 = sm.readReg64 .x24 := by assumption
+    have ev : calleeSavedVRegs st = calleeSavedVRegs sm := by assumption
     have hO := outerStep_ok st s tail len c (BitVec.ofNat 64 nb) bufp (nb - 1) data ctr ks cpb ob F
       hpc_st hrun_st (by rw [hst]; exact hsp) (by assumption) (by assumption)
       (by rw [e29, h29, hst]) (by rw [e22, h22, hst]) (by rw [e23, h23, hst])
@@ -105,7 +108,7 @@ theorem outerLoop_ok [CpPlacement] (sm : Arm64.State) (s : Spec.State) (tail len
     rw [hst] at hO
     simp only [sepConj_assoc]
     refine SepWP.seq hO ?_
-    intro s1 Pm hpc1 hrun1 ⟨⟨hr1, h1sp, h129, h110, h18, h1ps, h122, h123, h124, h1v0⟩, hent⟩
+    intro s1 Pm hpc1 hrun1 ⟨⟨hr1, h1sp, h129, h110, h18, h1ps, h122, h123, h124, h1v0, h1x1, h1v⟩, hent⟩
     refine SepWP.weaken_pre hent ?_
     have hnb1 : BitVec.ofNat 64 (nb - 1) + 1#64 = BitVec.ofNat 64 nb := by bv_omega
     rw [hnb1] at h1ps
@@ -114,7 +117,8 @@ theorem outerLoop_ok [CpPlacement] (sm : Arm64.State) (s : Spec.State) (tail len
     have hblk := blockOf_length data (64 * (nb - 1)) (by omega)
     refine SepWP.done (by simp [wp_norm, arm64_norm]) (by simp [wp_norm, arm64_norm, hrun1]) ?_
     refine ⟨⟨?_, by simpa [wp_norm, arm64_norm] using h1sp,
-      by simpa [wp_norm, arm64_norm] using h129.trans e29⟩, ?_⟩
+      by simpa [wp_norm, arm64_norm] using h129.trans e29, by simpa [wp_norm, arm64_norm] using h1x1,
+      by simpa [wp_norm, arm64_norm] using h1v.trans ev⟩, ?_⟩
     · unfold regsO at hr1; simpa [wp_norm, arm64_norm] using hr1.2.2.2.2.2.2.2.2.2.2.2.2.1
     · have hxl : (xorBytes (blockOf data (64 * (nb - 1))) (stateBlock (s.advance (nb - 1)))).length = 64 := by
         simp [xorBytes, hblk]
@@ -130,6 +134,7 @@ theorem outerLoop_ok [CpPlacement] (sm : Arm64.State) (s : Spec.State) (tail len
     have e22 : st.readReg64 .x22 = sm.readReg64 .x22 := by assumption
     have e23 : st.readReg64 .x23 = sm.readReg64 .x23 := by assumption
     have e24 : st.readReg64 .x24 = sm.readReg64 .x24 := by assumption
+    have ev : calleeSavedVRegs st = calleeSavedVRegs sm := by assumption
     have hm : m' + 1 ≤ nb - 1 := by assumption
     have hO := outerStep_ok st s tail len c (BitVec.ofNat 64 nb) bufp (nb - 1 - (m' + 1)) data ctr ks cpb ob F
       hpc_st hrun_st (by rw [hst]; exact hsp) (by assumption) (by assumption)
@@ -138,7 +143,7 @@ theorem outerLoop_ok [CpPlacement] (sm : Arm64.State) (s : Spec.State) (tail len
     rw [hst] at hO
     simp only [sepConj_assoc]
     refine SepWP.seq hO ?_
-    intro s1 Pm hpc1 hrun1 ⟨⟨hr1, h1sp, h129, h110, h18, h1ps, h122, h123, h124, h1v0⟩, hent⟩
+    intro s1 Pm hpc1 hrun1 ⟨⟨hr1, h1sp, h129, h110, h18, h1ps, h122, h123, h124, h1v0, h1x1, h1v⟩, hent⟩
     refine SepWP.weaken_pre hent ?_
     have hk1 : (nb - 1 - (m' + 1)) + 1 = nb - 1 - m' := by omega
     have hnb1 : BitVec.ofNat 64 (nb - 1 - (m' + 1)) + 1#64 = BitVec.ofNat 64 (nb - 1 - m') := by bv_omega
@@ -153,7 +158,8 @@ theorem outerLoop_ok [CpPlacement] (sm : Arm64.State) (s : Spec.State) (tail len
     refine ⟨⟨by omega, by simp only [regsO_setPC]; exact hr1, by simpa [wp_norm, arm64_norm] using h1sp,
       by simpa [wp_norm, arm64_norm] using h110, by simpa [wp_norm, arm64_norm] using h129.trans e29,
       by simpa [wp_norm, arm64_norm] using h122.trans e22, by simpa [wp_norm, arm64_norm] using h123.trans e23,
-      by simpa [wp_norm, arm64_norm] using h124.trans e24, by simpa [wp_norm, arm64_norm] using h1v0⟩, ?_⟩
+      by simpa [wp_norm, arm64_norm] using h124.trans e24, by simpa [wp_norm, arm64_norm] using h1v0,
+      by simpa [wp_norm, arm64_norm] using h1v.trans ev⟩, ?_⟩
     have hc := akScratch_close sm.sp tail len c s (BitVec.ofNat 64 nb) bufp (s.advance (nb - 1 - (m' + 1))).x12
       ((iter doubleRound 10 (s.advance (nb - 1 - (m' + 1)))).add (s.advance (nb - 1 - (m' + 1)))) _ _ hblk hxl
     refine Entails.trans ?_ (sepConj_mono_left hc)
