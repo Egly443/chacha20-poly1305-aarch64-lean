@@ -97,4 +97,53 @@ theorem slice_write32_lo (sb : List (BitVec 8)) (o : Nat) (h : o + 16 ≤ 48) (h
     repeat' split
     all_goals first | omega | (congr 1; omega) | (simp_all; done) | skip
 
+theorem unpackLE_ofNat_natLe (x : Nat) :
+    ByteSlice.unpackLE 8 (BitVec.ofNat 64 x) = natLe 8 x := by
+  simp only [ByteSlice.unpackLE, natLe, List.range, List.range.loop, List.map]
+  refine List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
+    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_,
+    List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, rfl⟩⟩⟩⟩⟩⟩⟩⟩ <;>
+  · apply BitVec.eq_of_toNat_eq
+    simp only [BitVec.extractLsb'_toNat, BitVec.toNat_ofNat, Nat.shiftRight_eq_div_pow]
+    omega
+
+theorem write64_pair (D : List (BitVec 8)) (v1 v2 : BitVec 64) (hD : D.length = 16) :
+    ByteSlice.write64 (ByteSlice.write64 D 0 v1) 8 v2 = ByteSlice.unpackLE 8 v1 ++ ByteSlice.unpackLE 8 v2 := by
+  match D, hD with
+  | _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: _ :: [], _ => rfl
+
+/-- The 56 bytes of a Poly1305 state: pad words, then `r` and `h` limbs. -/
+def polyBytes (w0 w1 w2 w3 : BitVec 32) (l : PolyLimbs) : Bytes :=
+  word32Bytes w0 ++ word32Bytes w1 ++ word32Bytes w2 ++ word32Bytes w3 ++
+  word32Bytes l.r0 ++ word32Bytes l.r1 ++ word32Bytes l.r2 ++ word32Bytes l.r3 ++ word32Bytes l.r4 ++
+  word32Bytes l.h0 ++ word32Bytes l.h1 ++ word32Bytes l.h2 ++ word32Bytes l.h3 ++ word32Bytes l.h4
+
+theorem polyBytes_length (w0 w1 w2 w3 : BitVec 32) (l : PolyLimbs) : (polyBytes w0 w1 w2 w3 l).length = 56 := rfl
+
+theorem polyState_bytes (st : BitVec 64) (w0 w1 w2 w3 : BitVec 32) (l : PolyLimbs) :
+    (words4At st w0 w1 w2 w3 ∗ polyLimbsAt st l) = (st ↦ₛ polyBytes w0 w1 w2 w3 l) := by
+  have hl : ∀ w : BitVec 32, (word32Bytes w).length = 4 := fun _ => rfl
+  simp only [polyBytes, List.append_assoc, pointsToBytes_append, hl, List.length_append]
+  simp only [words4At, polyLimbsAt, limbsAt, pointsTo32_eq_word32Bytes]
+  apply sepProp_ext <;> sep_entail
+
+theorem bytes16_words (p : BitVec 64) (X : Bytes) (hX : X.length = 16) :
+    (p ↦ₛ X) = words4At p (word32At X 0) (word32At X 4) (word32At X 8) (word32At X 12) := by
+  match X, hX with
+  | b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: b8 :: b9 :: b10 :: b11 :: b12 :: b13 :: b14 :: b15 :: [], _ =>
+    simp only [words4At, word32At, byteAt, List.getD_cons_succ, List.getD_cons_zero,
+      ← pointsToBytes4_eq_pointsTo32, pointsToBytes_cons, pointsToBytes_nil, sepConj_emp]
+    apply sepProp_ext <;> sep_entail
+
+
+theorem words4_natLe (t0 t1 t2 t3 : BitVec 32) :
+    word32Bytes t0 ++ word32Bytes t1 ++ word32Bytes t2 ++ word32Bytes t3 =
+      natLe 16 (words4Val t0 t1 t2 t3) := by
+  have b0 := t0.isLt; have b1 := t1.isLt; have b2 := t2.isLt; have b3 := t3.isLt
+  simp only [word32Bytes, natLe, words4Val, List.cons_append, List.nil_append]
+  refine List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, List.cons_eq_cons.mpr ⟨?_, rfl⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩ <;>
+  · apply BitVec.eq_of_toNat_eq
+    simp only [BitVec.extractLsb'_toNat, BitVec.toNat_ofNat, Nat.shiftRight_eq_div_pow]
+    omega
+
 end ChaChaPoly.Proofs
