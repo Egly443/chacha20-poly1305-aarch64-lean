@@ -3,6 +3,13 @@
  "packages":
  [{"type": "path",
    "scope": "",
+   "name": "«verified-libraries»",
+   "manifestFile": "lake-manifest.json",
+   "inherited": false,
+   "dir": "third_party/code-verification/arm64-semantics/VerifiedLibraries",
+   "configFile": "lakefile.lean"},
+  {"type": "path",
+   "scope": "",
    "name": "prooflib",
    "manifestFile": "lake-manifest.json",
    "inherited": false,
@@ -13,7 +20,8 @@
    "name": "arm64",
    "manifestFile": "lake-manifest.json",
    "inherited": true,
-   "dir": "third_party/code-verification/arm64-semantics/ProofLib/../Arm64",
+   "dir":
+   "third_party/code-verification/arm64-semantics/VerifiedLibraries/../ProofLib/../Arm64",
    "configFile": "lakefile.toml"}],
  "name": "«chachapoly-verification»",
  "lakeDir": ".lake",

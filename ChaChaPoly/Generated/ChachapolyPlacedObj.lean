@@ -33,6 +33,8 @@ slice), per-symbol `Obj.SymDataInfo` entries, and the library's exported functio
 * Block `8` (+236): `poly1305:.text.<poly1305::Poly1305 as universal_hash::UniversalHash>::finalize`
 * Block `9` (+8): `poly1305:.text.<poly1305::backend::soft::State as universal_hash::UhfBackend>::proc_block`
 * Block `10` (+96): `poly1305:.text.<poly1305::Poly1305 as crypto_common::KeyInit>::new`
+* Block `11` (+396): `memcpy:.text`
+* Block `12` (+260): `memset:.text`
 
 ## Unreferenced data (not modelled)
 
@@ -70,18 +72,22 @@ def chachapolyPlacedCode8 : List (BitVec 8) := include_bytes% "ChachapolyPlacedO
 def chachapolyPlacedCode9 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 5616 8
 /-- The code bytes of block `10` (`poly1305:.text.<poly1305::Poly1305 as crypto_common::KeyInit>::new`). -/
 def chachapolyPlacedCode10 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 5624 96
+/-- The code bytes of block `11` (`memcpy:.text`). -/
+def chachapolyPlacedCode11 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 5720 396
+/-- The code bytes of block `12` (`memset:.text`). -/
+def chachapolyPlacedCode12 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 6116 260
 /-- The bytes of data object `chachapoly_verified:.rodata.str1.1+0x0`. -/
-def chachapolyPlacedData0 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 5720 76
+def chachapolyPlacedData0 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 6376 76
 /-- The bytes of data object `chachapoly_verified:.rodata..Lanon.1`. -/
-def chachapolyPlacedData1 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 5796 43
+def chachapolyPlacedData1 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 6452 43
 /-- The bytes of data object `chachapoly_verified:.rodata..Lanon.2`. -/
-def chachapolyPlacedData2 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 5839 32
+def chachapolyPlacedData2 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 6495 32
 /-- The bytes of data object `chachapoly_verified:.rodata.cst16+0x0`. -/
-def chachapolyPlacedData3 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 5871 16
+def chachapolyPlacedData3 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 6527 16
 /-- The bytes of data object `chachapoly_verified:.rodata..Lanon.4`. -/
-def chachapolyPlacedData4 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 5887 17
+def chachapolyPlacedData4 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 6543 17
 /-- The bytes of data object `chachapoly_verified:.rodata..Lanon.5`. -/
-def chachapolyPlacedData5 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 5904 24
+def chachapolyPlacedData5 : List (BitVec 8) := include_bytes% "ChachapolyPlacedObj.bin" 6560 24
 
 /-- The code blocks of `chachapoly`. -/
 def chachapolyBlocks : List Obj.CodeBlock := [
@@ -92,9 +98,7 @@ def chachapolyBlocks : List Obj.CodeBlock := [
     relocs := []
     externs := [
       "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
-      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed",
-      "memcpy",
-      "memset"] },
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] },
   { code := chachapolyPlacedCode1
     align := 4
     symbols := [
@@ -102,9 +106,7 @@ def chachapolyBlocks : List Obj.CodeBlock := [
     relocs := []
     externs := [
       "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
-      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed",
-      "memcpy",
-      "memset"] },
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] },
   { code := chachapolyPlacedCode2
     align := 4
     symbols := [
@@ -115,9 +117,7 @@ def chachapolyBlocks : List Obj.CodeBlock := [
       { off := 16, kind := .jump26, sym := "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str" }]
     externs := [
       "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
-      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed",
-      "memcpy",
-      "memset"] },
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] },
   { code := chachapolyPlacedCode3
     align := 4
     symbols := [
@@ -125,9 +125,7 @@ def chachapolyBlocks : List Obj.CodeBlock := [
     relocs := []
     externs := [
       "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
-      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed",
-      "memcpy",
-      "memset"] },
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] },
   { code := chachapolyPlacedCode4
     align := 4
     symbols := [
@@ -143,9 +141,7 @@ def chachapolyBlocks : List Obj.CodeBlock := [
       { off := 1176, kind := .call26, sym := "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed" }]
     externs := [
       "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
-      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed",
-      "memcpy",
-      "memset"] },
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] },
   { code := chachapolyPlacedCode5
     align := 4
     symbols := [
@@ -186,9 +182,7 @@ def chachapolyBlocks : List Obj.CodeBlock := [
       { off := 1472, kind := .call26, sym := "core::ptr::drop_glue::<chacha20poly1305::cipher::Cipher<cipher::stream_wrapper::StreamCipherCoreWrapper<chacha20::ChaChaCore<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B1>, typenum::bit::B0>>>>>" }]
     externs := [
       "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
-      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed",
-      "memcpy",
-      "memset"] },
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] },
   { code := chachapolyPlacedCode6
     align := 4
     symbols := [
@@ -213,9 +207,7 @@ def chachapolyBlocks : List Obj.CodeBlock := [
       { off := 1048, kind := .call26, sym := "core::ptr::drop_glue::<chacha20poly1305::cipher::Cipher<cipher::stream_wrapper::StreamCipherCoreWrapper<chacha20::ChaChaCore<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B1>, typenum::bit::B0>>>>>" }]
     externs := [
       "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
-      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed",
-      "memcpy",
-      "memset"] },
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] },
   { code := chachapolyPlacedCode7
     align := 4
     symbols := [
@@ -223,9 +215,7 @@ def chachapolyBlocks : List Obj.CodeBlock := [
     relocs := []
     externs := [
       "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
-      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed",
-      "memcpy",
-      "memset"] },
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] },
   { code := chachapolyPlacedCode8
     align := 4
     symbols := [
@@ -233,9 +223,7 @@ def chachapolyBlocks : List Obj.CodeBlock := [
     relocs := []
     externs := [
       "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
-      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed",
-      "memcpy",
-      "memset"] },
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] },
   { code := chachapolyPlacedCode9
     align := 4
     symbols := [
@@ -244,9 +232,7 @@ def chachapolyBlocks : List Obj.CodeBlock := [
       { off := 4, kind := .jump26, sym := "<poly1305::backend::soft::State>::compute_block" }]
     externs := [
       "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
-      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed",
-      "memcpy",
-      "memset"] },
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] },
   { code := chachapolyPlacedCode10
     align := 4
     symbols := [
@@ -254,9 +240,23 @@ def chachapolyBlocks : List Obj.CodeBlock := [
     relocs := []
     externs := [
       "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
-      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed",
-      "memcpy",
-      "memset"] }
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] },
+  { code := chachapolyPlacedCode11
+    align := 16
+    symbols := [
+      ("memcpy", 0x0)]
+    relocs := []
+    externs := [
+      "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] },
+  { code := chachapolyPlacedCode12
+    align := 16
+    symbols := [
+      ("memset", 0x0)]
+    relocs := []
+    externs := [
+      "_RNvMsa_NtCs2kXltWtc1W_4core3fmtNtB5_9Formatter9write_str",
+      "_RNvNtCs2kXltWtc1W_4core6result13unwrap_failed"] }
 ]
 
 /-- The data objects of `chachapoly`. -/

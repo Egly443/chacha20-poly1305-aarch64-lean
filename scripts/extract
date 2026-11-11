@@ -7,12 +7,25 @@
 #
 # The generated files are checked in so that `lake build` needs no Rust toolchain; `--check`
 # re-derives them from the pinned sources.
+#
+# Besides the Rust objects, the library contains musl's AArch64 `memcpy` and `memset`
+# (`memcpy.lo` / `memset.lo` of the toolchain's self-contained `libc.a`, the objects the linker
+# put in the ELF). They are unpacked into `impl/musl/` after checking `libc.a` against the SHA-256
+# that upstream `VerifiedLibraries.Musl` pins for its proofs of these two functions.
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TOOLS="$REPO/third_party/code-verification/arm64-semantics/tools"
 export RUSTUP_TOOLCHAIN=1.98.1
 ( cd "$TOOLS" && cargo build --release --locked -p rust-obj2lean >&2 )
 "$REPO/scripts/build-elf" --verify-pin
+LIBC_SHA256=b03473b6f1efb72f700f561b4407a88885b37e0edb5cdb2a64de0df5499e813f
+LIBC="$(rustc --print sysroot)/lib/rustlib/aarch64-unknown-linux-musl/lib/self-contained/libc.a"
+echo "$LIBC_SHA256  $LIBC" | sha256sum --check --quiet - \
+  || { echo "extract: $LIBC does not match the pinned musl libc.a" >&2; exit 1; }
+mkdir -p "$REPO/impl/musl"
+for f in memcpy memset; do
+  ( cd "$REPO/impl/musl" && ar p "$LIBC" "$f.lo" > "$f.o" )
+done
 cd "$REPO"
 exec "$TOOLS/target/release/rust-obj2lean" --config impl/translation.toml --out-dir . \
   --module-prefix ChaChaPoly.Generated "$@"

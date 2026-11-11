@@ -11,6 +11,8 @@ obj_name = "chachapoly"
 obj_file = "ChaChaPoly/Generated/ChachapolyObj.lean"
 namespace_prefix = "ChaChaPoly"
 page_separate_data = true
+# musl's `memcpy` / `memset`, unpacked from the toolchain's `libc.a` by `scripts/extract`.
+c_objects = ["musl/memcpy.o", "musl/memset.o"]
 hashed_inputs = ["Cargo.toml", "Cargo.lock", ".cargo/config.toml", "src/lib.rs", "src/main.rs"]
 license_header = [
     "Machine code in this file is compiled from the RustCrypto crates `chacha20poly1305` v0.10.1,",

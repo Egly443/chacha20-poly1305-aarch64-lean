@@ -32,7 +32,9 @@ Proved, kernel-checked, no `sorry`, standard axioms only (`scripts/audit`):
 Not yet proved:
 
 - Machine-code refinement of the two entry points `chachapoly_encrypt` / `chachapoly_decrypt`
-  (key setup, AAD/ciphertext MAC, tag comparison, and their `memcpy` / `memset` calls).
+  (key setup, AAD/ciphertext MAC, tag comparison). Their contracts are written
+  (`aeadEncryptContract` / `aeadDecryptContract` in `Spec/Contracts.lean`), and every function they
+  call is now proved, including musl's `memcpy` / `memset`.
 - Consequently there is **no end-to-end theorem about the entry points yet**, and the symbolic
   integrity theorem is about the Lean construction, not yet transferred to the binary.
 
@@ -99,10 +101,14 @@ comparator/run.sh
   encryption, Poly1305, key generation and the AEAD (`RFC8439Vectors.lean`).
 - **Memory model of the contracts**: byte-granular separation logic; each contract names the
   memory it owns, including its stack frame (144 bytes for the block function).
-- **Hooks**: none so far. The library's external references are `memcpy`, `memset`, and the
-  two panic-path functions `core::result::unwrap_failed` / `Formatter::write_str`; they are
-  only reached from functions that are not yet verified, and how each is treated will be
-  recorded here when those proofs land.
+- **Hooks**: none. musl's AArch64 `memcpy` and `memset` (called by the entry points to pad a
+  partial Poly1305 block) are not hooked: their machine code is extracted into the library as
+  blocks 11 and 12 (`memcpy.lo` / `memset.lo` from the toolchain's self-contained `libc.a`,
+  SHA-256 `b03473b6…813f`, checked by `scripts/extract`), and the kernel checks that it is word for
+  word the code upstream `VerifiedLibraries.Musl` verifies, whose proofs give their full C
+  contracts (`Proofs/MuslBlocks.lean`). The only remaining external references are the
+  panic-path functions `core::result::unwrap_failed` / `Formatter::write_str`, reached only on
+  the paths the contracts exclude.
 - **Symbolic model**: `aead_integrity` assumes `Prims.IdealMac` (no two messages share a tag
   under one key). Real Poly1305 has 16-byte tags and cannot satisfy it; the theorem excludes
   forgeries that do not go through a MAC collision and is not a computational bound.

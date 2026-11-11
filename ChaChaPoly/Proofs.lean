@@ -21,3 +21,4 @@ public import ChaChaPoly.Proofs.ApplyKeystream7
 public import ChaChaPoly.Proofs.ApplyKeystream8
 public import ChaChaPoly.Proofs.ApplyKeystream9
 public import ChaChaPoly.Proofs.ApplyKeystream10
+public import ChaChaPoly.Proofs.MuslBlocks

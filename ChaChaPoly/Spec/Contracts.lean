@@ -239,4 +239,73 @@ def applyKeystreamContract : Spec ApplyKeystreamArgs where
     ((a.c + 0x80#64) ↦₈ BitVec.ofNat 8 (a.data.length % 64)) ∗
     (a.bufp ↦ₛ streamXor a.s a.data) ∗ stackFrame s0 0x230
 
+/-! ## The AEAD entry points -/
+
+/-- The C symbol of the encryption entry point. -/
+def encryptSym : String := "chachapoly_encrypt"
+
+/-- The C symbol of the decryption entry point. -/
+def decryptSym : String := "chachapoly_decrypt"
+
+/-- Largest message length the contracts admit: `64 · (2^32 − 1) − 64` bytes. Encryption
+    starts the ChaCha20 block counter at 1, so this is the longest message whose key stream fits
+    the 32-bit counter (`⌈len / 64⌉ + 1 < 2^32`). RustCrypto's own length guard
+    (`P_MAX = 2^38 − 64`) rejects only lengths of at least `274,877,906,880`; on the 63 lengths in
+    between the binary panics in `apply_keystream`, so they are excluded here. -/
+def maxMsgLen : Nat := 274877906816
+
+/-- Ghost state of an entry-point call: the five pointers (`x0`, `x1`, `x2`, `x4`, `x6`) and the
+    bytes behind them — key, nonce, associated data, the in-place buffer `msg` (plaintext for
+    encryption, ciphertext for decryption) and the 16 tag bytes (previous contents of the output
+    for encryption, the tag to check for decryption). -/
+structure AeadArgs where
+  key : BitVec 64
+  nonce : BitVec 64
+  aad : BitVec 64
+  buf : BitVec 64
+  tag : BitVec 64
+  k : Bytes
+  n : Bytes
+  a : Bytes
+  msg : Bytes
+  t : Bytes
+
+/-- The common precondition: argument registers per the C prototype
+    `(key, nonce, aad, aad_len, buf, len, tag)`, lengths, and ownership of the five buffers as
+    separate byte slices (so they do not overlap). -/
+def aeadPre (g : AeadArgs) (s0 : Arm64.State) : SepProp :=
+  ⌜s0.readReg64 .x0 = g.key ∧ s0.readReg64 .x1 = g.nonce ∧ s0.readReg64 .x2 = g.aad ∧
+    s0.readReg64 .x3 = BitVec.ofNat 64 g.a.length ∧ s0.readReg64 .x4 = g.buf ∧
+    s0.readReg64 .x5 = BitVec.ofNat 64 g.msg.length ∧ s0.readReg64 .x6 = g.tag ∧
+    g.k.length = 32 ∧ g.n.length = 12 ∧ g.t.length = 16 ∧
+    g.a.length < 2 ^ 63 ∧ g.msg.length ≤ maxMsgLen⌝ ∗
+  (g.key ↦ₛ g.k) ∗ (g.nonce ↦ₛ g.n) ∗ (g.aad ↦ₛ g.a) ∗ (g.buf ↦ₛ g.msg) ∗ (g.tag ↦ₛ g.t)
+
+/-- Contract of `chachapoly_encrypt` (RFC 8439 §2.8 AEAD encryption, in place, detached tag).
+
+    It returns `0` (as a 32-bit `int`), the buffer holds the ciphertext and `tag` the tag of
+    `aeadEncrypt key nonce aad msg`; key, nonce and associated data are unchanged. Stack: the
+    function's `0x270`-byte frame plus `0x230` bytes for `apply_keystream`. -/
+def aeadEncryptContract : Spec AeadArgs where
+  pre := fun g s0 => aeadPre g s0 ∗ stackFrame s0 0x4a0
+  post := fun g s0 sf =>
+    ⌜(sf.readReg64 .x0).truncate 32 = 0#32⌝ ∗
+    (g.key ↦ₛ g.k) ∗ (g.nonce ↦ₛ g.n) ∗ (g.aad ↦ₛ g.a) ∗
+    (g.buf ↦ₛ (aeadEncrypt g.k g.n g.a g.msg).1) ∗ (g.tag ↦ₛ (aeadEncrypt g.k g.n g.a g.msg).2) ∗
+    stackFrame s0 0x4a0
+
+/-- Contract of `chachapoly_decrypt` (RFC 8439 §2.8 AEAD decryption, in place, detached tag).
+
+    If `aeadDecrypt key nonce aad msg tag` accepts with plaintext `p`, it returns `0` and the
+    buffer holds `p`; if it rejects, it returns `-1` and the buffer is unchanged. All other
+    inputs are unchanged. Stack: the function's `0x260`-byte frame plus `0x230` bytes for
+    `apply_keystream`. -/
+def aeadDecryptContract : Spec AeadArgs where
+  pre := fun g s0 => aeadPre g s0 ∗ stackFrame s0 0x490
+  post := fun g s0 sf =>
+    (match aeadDecrypt g.k g.n g.a g.msg g.t with
+      | some p => ⌜(sf.readReg64 .x0).truncate 32 = 0#32⌝ ∗ (g.buf ↦ₛ p)
+      | none => ⌜(sf.readReg64 .x0).truncate 32 = 0xffffffff#32⌝ ∗ (g.buf ↦ₛ g.msg)) ∗
+    (g.key ↦ₛ g.k) ∗ (g.nonce ↦ₛ g.n) ∗ (g.aad ↦ₛ g.a) ∗ (g.tag ↦ₛ g.t) ∗ stackFrame s0 0x490
+
 end ChaChaPoly.Spec

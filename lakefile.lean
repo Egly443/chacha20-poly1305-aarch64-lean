@@ -23,6 +23,7 @@ package «chachapoly-verification» where
   weakLeanArgs := #["-M", "12288"]
 
 require prooflib from "third_party/code-verification/arm64-semantics/ProofLib"
+require «verified-libraries» from "third_party/code-verification/arm64-semantics/VerifiedLibraries"
 
 lean_lib Generated where
   roots := #[`ChaChaPoly.Generated]
