@@ -20,6 +20,8 @@ Proved, kernel-checked, no `sorry`, standard axioms only (`scripts/audit`):
 | `chacha20_block_refines` | For every placement, the machine code of `ChaChaCore::write_keystream_block` (167 instructions) writes `(doubleRound^10 s) + s` and increments the block counter. No hooks. |
 | `poly1305_block_refines` | For every placement, the machine code of Poly1305's `State::compute_block` (74 instructions, `partial = false`) performs one RFC 8439 §2.5.1 step: the accumulator becomes `(acc + block‖0x01) · r mod 2^130 − 5`. No hooks. |
 | `poly1305_finalize_refines` | For every placement, the machine code of `Poly1305::finalize` (59 instructions, including the constant-time final reduction) writes the tag `(acc mod 2^130 − 5 + s) mod 2^128`. No hooks. |
+| `poly1305_new_refines` | For every placement, the machine code of `Poly1305::new` (24 instructions) builds a state representing `r = clamp(key[0..16])`, accumulator 0 and pad `key[16..32]`. The clamp is checked bit by bit by the kernel-checked ROBDD procedure. No hooks. |
+| `poly1305_proc_block_refines` | For every placement, `proc_block` (sets `partial = false`, tail-calls `compute_block` in another code block) performs one §2.5.1 step. No hooks. |
 | `aead_roundtrip` | In the RFC 8439 model, decryption inverts encryption on all inputs. |
 | `aead_is_construction` | The RFC model is the generic §2.8 construction instantiated with the real ChaCha20 / Poly1305. |
 | `aead_integrity` | Symbolic integrity of the construction: under an ideal MAC, any change to the ciphertext or the associated data is rejected. |
@@ -27,10 +29,10 @@ Proved, kernel-checked, no `sorry`, standard axioms only (`scripts/audit`):
 
 Not yet proved:
 
-- Machine-code refinement of the other eight functions: the rest of Poly1305 (`Poly1305::new`,
-  `proc_block`), the stream-cipher wrapper
-  (`apply_keystream`), the `Cipher` drop glue, `subtle::black_box`, and the two entry points
-  `chachapoly_encrypt` / `chachapoly_decrypt` themselves.
+- Machine-code refinement of the remaining six functions: the stream-cipher wrapper
+  `apply_keystream`, the `Cipher` drop glue (zeroises the key schedule), `subtle::black_box`,
+  a 5-instruction error formatter on the panic path, and the two entry points
+  `chachapoly_encrypt` / `chachapoly_decrypt`.
 - Consequently there is **no end-to-end theorem about the entry points yet**, and the symbolic
   integrity theorem is about the Lean construction, not yet transferred to the binary.
 

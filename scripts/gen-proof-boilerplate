@@ -9,7 +9,7 @@ proof infrastructure: the kernel checks each fact against `chachapolyLib`.
 import pathlib
 
 # (block index, number of instructions)
-BLOCKS = [(0, 5), (1, 82), (3, 167), (7, 74), (8, 59), (10, 24)]
+BLOCKS = [(0, 5), (1, 82), (2, 5), (3, 167), (4, 295), (5, 410), (6, 307), (7, 74), (8, 59), (9, 2), (10, 24)]
 
 HEADER = '''module
 

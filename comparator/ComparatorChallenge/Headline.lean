@@ -67,6 +67,27 @@ theorem poly1305_finalize_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Pl
       (chachapolyLib.withCodeLoaded mpl polyFinalContract) :=
   sorry
 
+set_option maxRecDepth 200000 in
+/-- **Poly1305 key setup (machine code).** For every placement of the library, the AArch64 code
+    of `<Poly1305 as KeyInit>::new` satisfies `polyNewContract`: from a 32-byte key it builds a
+    state whose limbs represent `r = clamp (leNat key[0..16])` and accumulator `0`, with pad
+    `s = leNat key[16..32]` (RFC 8439 §2.5.1). No hooks. -/
+theorem poly1305_new_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Placeable mpl) :
+    subroutine_ok (chachapolyLib.blockProgram mpl 10)
+      (chachapolyLib.fnAddr mpl polyNewSym)
+      (chachapolyLib.withCodeLoaded mpl polyNewContract) :=
+  sorry
+
+set_option maxRecDepth 200000 in
+/-- **Poly1305 full-block wrapper (machine code).** For every placement, `proc_block` (which
+    sets `partial = false` and tail-calls `compute_block` in another code block) satisfies
+    `polyProcBlockContract`: one RFC 8439 §2.5.1 step on a full 16-byte block. No hooks. -/
+theorem poly1305_proc_block_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Placeable mpl) :
+    subroutine_ok (chachapolyLib.blockProgram mpl 9)
+      (chachapolyLib.fnAddr mpl polyProcBlockSym)
+      (chachapolyLib.withCodeLoaded mpl polyProcBlockContract) :=
+  sorry
+
 /-- **Round trip (model).** RFC 8439 decryption inverts encryption on all inputs. -/
 theorem aead_roundtrip (key nonce aad pt : Bytes) :
     aeadDecrypt key nonce aad (aeadEncrypt key nonce aad pt).1 (aeadEncrypt key nonce aad pt).2 =

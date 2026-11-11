@@ -141,4 +141,41 @@ def polyFinalContract : Spec PolyFinalArgs where
           words4Val a.s0 a.s1 a.s2 a.s3) % 2 ^ 128⌝ ∗
       words4At a.out t.1 t.2.1 t.2.2.1 t.2.2.2
 
+/-! ## Poly1305 key setup -/
+
+/-- The demangled name of `Poly1305::new` in the pinned object. -/
+def polyNewSym : String := "<poly1305::Poly1305 as crypto_common::KeyInit>::new"
+
+/-- Contract of `<Poly1305 as KeyInit>::new(key: &[u8; 32]) -> Poly1305`.
+
+    Ghosts: key pointer `k` (`x0`), output pointer `out` (`x8`, the indirect-result register,
+    56 writable bytes) and the 32 key bytes `kb`.
+
+    The new state holds the pad `s = leNat kb[16..32]` as four words at `out`, and limbs that
+    represent the multiplier `clamp (leNat kb[0..16])` and the accumulator `0` (RFC 8439 §2.5.1).
+    The key is only read. -/
+def polyNewContract : Spec (BitVec 64 × BitVec 64 × Bytes) where
+  pre := fun (k, out, kb) s0 =>
+    ⌜s0.readReg64 .x0 = k ∧ s0.readReg64 .x8 = out ∧ kb.length = 32⌝ ∗
+    (k ↦ₛ kb) ∗ memRegion out 56
+  post := fun (k, out, kb) _ _ =>
+    (k ↦ₛ kb) ∗
+    ∃∗ w : BitVec 32 × BitVec 32 × BitVec 32 × BitVec 32, ∃∗ l : PolyLimbs,
+      ⌜words4Val w.1 w.2.1 w.2.2.1 w.2.2.2 = leNat (kb.drop 16) ∧
+        l.Rep (clamp (leNat (kb.take 16))) 0⌝ ∗
+      words4At out w.1 w.2.1 w.2.2.1 w.2.2.2 ∗ polyLimbsAt out l
+
+/-- The demangled name of `proc_block` (a full-block wrapper around `compute_block`). -/
+def polyProcBlockSym : String :=
+  "<poly1305::backend::soft::State as universal_hash::UhfBackend>::proc_block"
+
+/-- Contract of `<State as UhfBackend>::proc_block(&mut self, block)`: `polyBlockContract`
+    without the `partial` argument (the wrapper passes `false`). -/
+def polyProcBlockContract : Spec (BitVec 64 × BitVec 64 × Bytes × Nat × Nat) where
+  pre := fun (st, blk, bs, r, acc) s0 =>
+    ∃∗ l : PolyLimbs,
+      ⌜(s0.readReg64 .x0 = st ∧ s0.readReg64 .x1 = blk ∧ bs.length = 16) ∧ l.Rep r acc⌝ ∗
+      (blk ↦ₛ bs) ∗ polyLimbsAt st l
+  post := polyBlockContract.post
+
 end ChaChaPoly.Spec

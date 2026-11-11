@@ -6,6 +6,8 @@
     "ChaChaPoly.Theorems.chacha20_block_refines",
     "ChaChaPoly.Theorems.poly1305_block_refines",
     "ChaChaPoly.Theorems.poly1305_finalize_refines",
+    "ChaChaPoly.Theorems.poly1305_new_refines",
+    "ChaChaPoly.Theorems.poly1305_proc_block_refines",
     "ChaChaPoly.Theorems.aead_roundtrip",
     "ChaChaPoly.Theorems.aead_is_construction",
     "ChaChaPoly.Theorems.aead_integrity",

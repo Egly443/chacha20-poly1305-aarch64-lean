@@ -74,6 +74,28 @@ gen_placed_fetches cpPC1 cpLib1 cpTree1 cp1_code_eq cp1_tree_size
   via_placement cpPl1 cpPlaceable1 [0x0 → 0x144]
 gen_placed_fnOffs cpPC1 cpLib1 cpSymChars1 cp1_symbols_eq cp1_symbols_fresh
 
+/-! ## Block 2 -/
+
+def cpLib2 : PlacedLib := chachapolyLib.blockLib 2
+def cpPl2 [CpPlacement] : Placement := chachapolyLib.blockPlacement cpMpl 2
+theorem cpPlaceable2 [CpPlacement] : cpLib2.Placeable cpPl2 :=
+  chachapolyLib.placeable_blockLib (by decide) CpPlacement.placeable
+def cpPC2 [CpPlacement] : Program := cpLib2.program cpPl2
+/-- Block 2 as a program at its placed base, without hooks. -/
+abbrev cpProg2r [CpPlacement] : Program := cpPC2.rebase cpPl2.base (fun _ => none)
+
+def cpProg2 : Program := { code := cpLib2.text.code, symbols := cpLib2.text.symbols }
+def cpTree2 : WordTree := word_tree_of% cpProg2
+theorem cp2_code_eq : cpLib2.text.code = cpTree2.toBytes := by rfl_kernel
+theorem cp2_tree_size : cpTree2.checkSize? = some 5 := by rfl_kernel
+def cpSymChars2 : List (List Char × Nat) := sym_chars_of% cpProg2
+theorem cp2_symbols_eq : cpLib2.text.symbols = toStringSymbols cpSymChars2 := by rfl_kernel
+theorem cp2_symbols_fresh : allFreshCharSymbols cpSymChars2 = true := by rfl_kernel
+
+gen_placed_fetches cpPC2 cpLib2 cpTree2 cp2_code_eq cp2_tree_size
+  via_placement cpPl2 cpPlaceable2 [0x0 → 0x10]
+gen_placed_fnOffs cpPC2 cpLib2 cpSymChars2 cp2_symbols_eq cp2_symbols_fresh
+
 /-! ## Block 3 -/
 
 def cpLib3 : PlacedLib := chachapolyLib.blockLib 3
@@ -95,6 +117,72 @@ theorem cp3_symbols_fresh : allFreshCharSymbols cpSymChars3 = true := by rfl_ker
 gen_placed_fetches cpPC3 cpLib3 cpTree3 cp3_code_eq cp3_tree_size
   via_placement cpPl3 cpPlaceable3 [0x0 → 0x298]
 gen_placed_fnOffs cpPC3 cpLib3 cpSymChars3 cp3_symbols_eq cp3_symbols_fresh
+
+/-! ## Block 4 -/
+
+def cpLib4 : PlacedLib := chachapolyLib.blockLib 4
+def cpPl4 [CpPlacement] : Placement := chachapolyLib.blockPlacement cpMpl 4
+theorem cpPlaceable4 [CpPlacement] : cpLib4.Placeable cpPl4 :=
+  chachapolyLib.placeable_blockLib (by decide) CpPlacement.placeable
+def cpPC4 [CpPlacement] : Program := cpLib4.program cpPl4
+/-- Block 4 as a program at its placed base, without hooks. -/
+abbrev cpProg4r [CpPlacement] : Program := cpPC4.rebase cpPl4.base (fun _ => none)
+
+def cpProg4 : Program := { code := cpLib4.text.code, symbols := cpLib4.text.symbols }
+def cpTree4 : WordTree := word_tree_of% cpProg4
+theorem cp4_code_eq : cpLib4.text.code = cpTree4.toBytes := by rfl_kernel
+theorem cp4_tree_size : cpTree4.checkSize? = some 295 := by rfl_kernel
+def cpSymChars4 : List (List Char × Nat) := sym_chars_of% cpProg4
+theorem cp4_symbols_eq : cpLib4.text.symbols = toStringSymbols cpSymChars4 := by rfl_kernel
+theorem cp4_symbols_fresh : allFreshCharSymbols cpSymChars4 = true := by rfl_kernel
+
+gen_placed_fetches cpPC4 cpLib4 cpTree4 cp4_code_eq cp4_tree_size
+  via_placement cpPl4 cpPlaceable4 [0x0 → 0x498]
+gen_placed_fnOffs cpPC4 cpLib4 cpSymChars4 cp4_symbols_eq cp4_symbols_fresh
+
+/-! ## Block 5 -/
+
+def cpLib5 : PlacedLib := chachapolyLib.blockLib 5
+def cpPl5 [CpPlacement] : Placement := chachapolyLib.blockPlacement cpMpl 5
+theorem cpPlaceable5 [CpPlacement] : cpLib5.Placeable cpPl5 :=
+  chachapolyLib.placeable_blockLib (by decide) CpPlacement.placeable
+def cpPC5 [CpPlacement] : Program := cpLib5.program cpPl5
+/-- Block 5 as a program at its placed base, without hooks. -/
+abbrev cpProg5r [CpPlacement] : Program := cpPC5.rebase cpPl5.base (fun _ => none)
+
+def cpProg5 : Program := { code := cpLib5.text.code, symbols := cpLib5.text.symbols }
+def cpTree5 : WordTree := word_tree_of% cpProg5
+theorem cp5_code_eq : cpLib5.text.code = cpTree5.toBytes := by rfl_kernel
+theorem cp5_tree_size : cpTree5.checkSize? = some 410 := by rfl_kernel
+def cpSymChars5 : List (List Char × Nat) := sym_chars_of% cpProg5
+theorem cp5_symbols_eq : cpLib5.text.symbols = toStringSymbols cpSymChars5 := by rfl_kernel
+theorem cp5_symbols_fresh : allFreshCharSymbols cpSymChars5 = true := by rfl_kernel
+
+gen_placed_fetches cpPC5 cpLib5 cpTree5 cp5_code_eq cp5_tree_size
+  via_placement cpPl5 cpPlaceable5 [0x0 → 0x664]
+gen_placed_fnOffs cpPC5 cpLib5 cpSymChars5 cp5_symbols_eq cp5_symbols_fresh
+
+/-! ## Block 6 -/
+
+def cpLib6 : PlacedLib := chachapolyLib.blockLib 6
+def cpPl6 [CpPlacement] : Placement := chachapolyLib.blockPlacement cpMpl 6
+theorem cpPlaceable6 [CpPlacement] : cpLib6.Placeable cpPl6 :=
+  chachapolyLib.placeable_blockLib (by decide) CpPlacement.placeable
+def cpPC6 [CpPlacement] : Program := cpLib6.program cpPl6
+/-- Block 6 as a program at its placed base, without hooks. -/
+abbrev cpProg6r [CpPlacement] : Program := cpPC6.rebase cpPl6.base (fun _ => none)
+
+def cpProg6 : Program := { code := cpLib6.text.code, symbols := cpLib6.text.symbols }
+def cpTree6 : WordTree := word_tree_of% cpProg6
+theorem cp6_code_eq : cpLib6.text.code = cpTree6.toBytes := by rfl_kernel
+theorem cp6_tree_size : cpTree6.checkSize? = some 307 := by rfl_kernel
+def cpSymChars6 : List (List Char × Nat) := sym_chars_of% cpProg6
+theorem cp6_symbols_eq : cpLib6.text.symbols = toStringSymbols cpSymChars6 := by rfl_kernel
+theorem cp6_symbols_fresh : allFreshCharSymbols cpSymChars6 = true := by rfl_kernel
+
+gen_placed_fetches cpPC6 cpLib6 cpTree6 cp6_code_eq cp6_tree_size
+  via_placement cpPl6 cpPlaceable6 [0x0 → 0x4c8]
+gen_placed_fnOffs cpPC6 cpLib6 cpSymChars6 cp6_symbols_eq cp6_symbols_fresh
 
 /-! ## Block 7 -/
 
@@ -139,6 +227,28 @@ theorem cp8_symbols_fresh : allFreshCharSymbols cpSymChars8 = true := by rfl_ker
 gen_placed_fetches cpPC8 cpLib8 cpTree8 cp8_code_eq cp8_tree_size
   via_placement cpPl8 cpPlaceable8 [0x0 → 0xe8]
 gen_placed_fnOffs cpPC8 cpLib8 cpSymChars8 cp8_symbols_eq cp8_symbols_fresh
+
+/-! ## Block 9 -/
+
+def cpLib9 : PlacedLib := chachapolyLib.blockLib 9
+def cpPl9 [CpPlacement] : Placement := chachapolyLib.blockPlacement cpMpl 9
+theorem cpPlaceable9 [CpPlacement] : cpLib9.Placeable cpPl9 :=
+  chachapolyLib.placeable_blockLib (by decide) CpPlacement.placeable
+def cpPC9 [CpPlacement] : Program := cpLib9.program cpPl9
+/-- Block 9 as a program at its placed base, without hooks. -/
+abbrev cpProg9r [CpPlacement] : Program := cpPC9.rebase cpPl9.base (fun _ => none)
+
+def cpProg9 : Program := { code := cpLib9.text.code, symbols := cpLib9.text.symbols }
+def cpTree9 : WordTree := word_tree_of% cpProg9
+theorem cp9_code_eq : cpLib9.text.code = cpTree9.toBytes := by rfl_kernel
+theorem cp9_tree_size : cpTree9.checkSize? = some 2 := by rfl_kernel
+def cpSymChars9 : List (List Char × Nat) := sym_chars_of% cpProg9
+theorem cp9_symbols_eq : cpLib9.text.symbols = toStringSymbols cpSymChars9 := by rfl_kernel
+theorem cp9_symbols_fresh : allFreshCharSymbols cpSymChars9 = true := by rfl_kernel
+
+gen_placed_fetches cpPC9 cpLib9 cpTree9 cp9_code_eq cp9_tree_size
+  via_placement cpPl9 cpPlaceable9 [0x0 → 0x4]
+gen_placed_fnOffs cpPC9 cpLib9 cpSymChars9 cp9_symbols_eq cp9_symbols_fresh
 
 /-! ## Block 10 -/
 
