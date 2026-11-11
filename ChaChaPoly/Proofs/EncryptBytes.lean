@@ -184,4 +184,22 @@ theorem zero_chain8 (mk : List (BitVec 8)) (h : mk.length = 32) :
   simp (disch := omega) only [ByteSlice.write8_fillPrefix]
   exact ByteSlice.fillPrefix_full h
 
+theorem cipher129_entails (c : BitVec 64) (s b : Spec.State) (v : BitVec 8) :
+    (stateAt c s ∗ stateAt (c + 64#64) b ∗ ((c + 128#64) ↦₈ v)) ⊢ memRegion c 129 := by
+  have hs : s.bytes.length = 64 := by simp [Spec.State.bytes, word32Bytes]
+  have hb : b.bytes.length = 64 := by simp [Spec.State.bytes, word32Bytes]
+  rw [stateAt_eq_bytes, stateAt_eq_bytes, ← pointsToBytes_singleton]
+  have e : (c ↦ₛ (s.bytes ++ (b.bytes ++ [v]))) =
+      (c ↦ₛ s.bytes) ∗ ((c + 64#64) ↦ₛ b.bytes) ∗ ((c + 128#64) ↦ₛ [v]) := by
+    rw [pointsToBytes_append, pointsToBytes_append, hs, hb, BitVec.add_assoc]; rfl
+  rw [← e]
+  have hl : (s.bytes ++ (b.bytes ++ [v])).length = 129 := by simp [hs, hb]
+  exact hl ▸ pointsToBytes_entails_memRegion c _
+
+theorem words4_bytes (p : BitVec 64) (t0 t1 t2 t3 : BitVec 32) :
+    words4At p t0 t1 t2 t3 = (p ↦ₛ (word32Bytes t0 ++ word32Bytes t1 ++ word32Bytes t2 ++ word32Bytes t3)) := by
+  have hl : ∀ w : BitVec 32, (word32Bytes w).length = 4 := fun _ => rfl
+  simp only [words4At, List.append_assoc, pointsToBytes_append, hl, pointsTo32_eq_word32Bytes]
+  apply sepProp_ext <;> sep_entail
+
 end ChaChaPoly.Proofs
