@@ -60,6 +60,20 @@ theorem apply_keystream_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Plac
   sorry
 
 set_option maxRecDepth 200000 in
+/-- **AEAD encryption (machine code).** For every placement of the library, the AArch64 code of
+    `chachapoly_encrypt` (307 instructions, calling the verified blocks above and musl's
+    `memcpy` / `memset`) satisfies `aeadEncryptContract`: given the key, nonce, associated data and
+    a message of at most `maxMsgLen` bytes in non-overlapping buffers, and the library's read-only
+    ChaCha constant at its placed address, it returns `0`, leaves the RFC 8439 §2.8 ciphertext
+    `(aeadEncrypt key nonce aad msg).1` in the buffer and writes the tag
+    `(aeadEncrypt key nonce aad msg).2`. No hooks. -/
+theorem chachapoly_encrypt_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Placeable mpl) :
+    subroutine_ok (chachapolyLib.blockProgram mpl 6)
+      (chachapolyLib.fnAddr mpl encryptSym)
+      (chachapolyLib.withCodeLoaded mpl (aeadEncryptContract (mpl.ρ sigmaDataSym))) :=
+  sorry
+
+set_option maxRecDepth 200000 in
 /-- **Poly1305 block step (machine code).** For every placement of the library, the AArch64
     code of RustCrypto's `State::compute_block` (called with `partial = false`) satisfies
     `polyBlockContract`: the accumulator becomes `(acc + block ‖ 0x01) * r mod 2^130 - 5`,

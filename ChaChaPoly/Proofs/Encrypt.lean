@@ -1,13 +1,35 @@
-import ChaChaPoly.Proofs
+module
+
+public import ChaChaPoly.Proofs.EncryptModel
+public import ChaChaPoly.Proofs.Poly1305NewMath
+public import ChaChaPoly.Proofs.Poly1305FinalMath
+public import ChaChaPoly.Proofs.Helpers
+
+/-!
+# `chachapoly_encrypt` (block 6)
+
+The whole entry point: prologue and inlined `ChaCha20Poly1305::new` (the ChaCha state is built
+byte by byte from the key and nonce and the constant in `.rodata`), the Poly1305 key from
+`apply_keystream` on 32 zero bytes, `Poly1305::new`, the RustCrypto length guard, the AAD and
+ciphertext Poly1305 passes (`EncryptMac.lean`), `apply_keystream` on the message, the length
+block, `finalize` on a copy of the MAC state, the cipher's drop glue, the tag copy-out, the key
+zeroisation and the epilogue. The stack frame is opened into typed cells (`SepWP.encFrame`) and
+folded back at the end (`encClose_fold`).
+-/
+
+@[expose] public section
+
+namespace ChaChaPoly.Proofs
+
 open Arm64 Arm64.Obj ProofLib ProofLib.ProgramReflection ProofLib.GenPlacedFetches
-open ChaChaPoly ChaChaPoly.Spec ChaChaPoly.Proofs
+open ChaChaPoly ChaChaPoly.Spec
+
 set_option maxRecDepth 200000
 set_option maxHeartbeats 8000000
 set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
 arm64_proof_prelude
-open ChaChaPoly.Spec
 
-open ChaChaPoly.Spec
 theorem sigma_chain (bs : List (BitVec 8)) (h : bs.length = 16) :
     ByteSlice.write64 (ByteSlice.write64 bs 0 3684054920433006693#64) 8 7719281312240119090#64 = sigmaBytes := by
   match bs, h with
@@ -703,10 +725,12 @@ theorem words4_region (p : BitVec 64) (a b c d : BitVec 32) : words4At p a b c d
 theorem slice_region (p : BitVec 64) (X : Bytes) (n : Nat) (h : X.length = n) : (p ↦ₛ X) ⊢ memRegion p n :=
   h ▸ pointsToBytes_entails_memRegion p X
 
+/-- The data symbol of the ChaCha constant `"expand 32-byte k"` in the library's `.rodata`. -/
 def sigmaSym : String := "chachapoly_verified:.rodata.cst16+0x0"
 
 set_option maxRecDepth 400000 in
-theorem encrypt_draft [CpPlacement] :
+/-- `chachapoly_encrypt` meets `aeadEncryptContract` for the library's ChaCha constant. -/
+theorem encrypt_ok [CpPlacement] :
     subroutine_ok cpProg6r cpPl6.base
       (chachapolyLib.withCodeLoaded cpMpl (aeadEncryptContract (cpMpl.ρ sigmaSym))) := by
   dsimp only [MultiPlacedLib.withCodeLoaded, aeadEncryptContract, aeadPre]
@@ -1089,4 +1113,4 @@ theorem encrypt_draft [CpPlacement] :
                 (by sep_focus) ?_
               wp_done
 
-#print axioms encrypt_draft
+end ChaChaPoly.Proofs

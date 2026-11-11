@@ -1,2 +1,2 @@
-Work in progress, not part of the Lean build: drafts of the `chachapoly_encrypt` proof
-(`EncryptDraft.lean`, checked with `lake env lean wip/EncryptDraft.lean`; contains `sorry`).
+Work-in-progress drafts (not part of the Lean build). Empty: the encrypt proof now lives in
+`ChaChaPoly/Proofs/Encrypt*.lean`.

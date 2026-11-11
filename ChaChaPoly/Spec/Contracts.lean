@@ -259,6 +259,9 @@ def maxMsgLen : Nat := 274877906816
 def sigmaBytes : Bytes :=
   [0x65, 0x78, 0x70, 0x61, 0x6e, 0x64, 0x20, 0x33, 0x32, 0x2d, 0x62, 0x79, 0x74, 0x65, 0x20, 0x6b]
 
+/-- The data symbol, in the pinned library, of the read-only constant `sigmaBytes`. -/
+def sigmaDataSym : String := "chachapoly_verified:.rodata.cst16+0x0"
+
 /-- Ghost state of an entry-point call: the five pointers (`x0`, `x1`, `x2`, `x4`, `x6`) and the
     bytes behind them — key, nonce, associated data, the in-place buffer `msg` (plaintext for
     encryption, ciphertext for decryption) and the 16 tag bytes (previous contents of the output

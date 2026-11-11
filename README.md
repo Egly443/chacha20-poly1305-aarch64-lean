@@ -19,6 +19,7 @@ Proved, kernel-checked, no `sorry`, standard axioms only (`scripts/audit`):
 | `chachapoly_linked_in` | The SHA-256-pinned ELF contains the extracted library (all 11 functions reachable from `chachapoly_encrypt` / `chachapoly_decrypt`) at a placement a standard static linker could produce. |
 | `chacha20_block_refines` | For every placement, the machine code of `ChaChaCore::write_keystream_block` (167 instructions) writes `(doubleRound^10 s) + s` and increments the block counter. No hooks. |
 | `apply_keystream_refines` | For every placement, the machine code of the stream-cipher wrapper `apply_keystream` (295 instructions: the per-block loop with the block function inlined, plus a `write_keystream_block` call for a final partial block) XORs the buffer in place with the RFC 8439 §2.4 key stream of the cipher state, advances the block counter by `⌈len/64⌉` and records `len mod 64` as the key-stream position. Precondition: position 0 on entry (true for the fresh cipher the entry points build) and no counter overflow (`⌈len/64⌉ + counter < 2^32`, the condition under which the code panics). No hooks. |
+| `chachapoly_encrypt_refines` | For every placement, the machine code of the entry point `chachapoly_encrypt` (307 instructions) meets `aeadEncryptContract`: given key, nonce, associated data and a message of at most `maxMsgLen` bytes in non-overlapping buffers (and the library's read-only ChaCha constant at its placed address), it returns `0`, leaves `(aeadEncrypt key nonce aad msg).1` in the buffer and writes `(aeadEncrypt key nonce aad msg).2` as the tag. Calls only verified code (the blocks above and musl's `memcpy` / `memset`). No hooks. |
 | `poly1305_block_refines` | For every placement, the machine code of Poly1305's `State::compute_block` (74 instructions, `partial = false`) performs one RFC 8439 §2.5.1 step: the accumulator becomes `(acc + block‖0x01) · r mod 2^130 − 5`. No hooks. |
 | `poly1305_finalize_refines` | For every placement, the machine code of `Poly1305::finalize` (59 instructions, including the constant-time final reduction) writes the tag `(acc mod 2^130 − 5 + s) mod 2^128`. No hooks. |
 | `poly1305_new_refines` | For every placement, the machine code of `Poly1305::new` (24 instructions) builds a state representing `r = clamp(key[0..16])`, accumulator 0 and pad `key[16..32]`. The clamp is checked bit by bit by the kernel-checked ROBDD procedure. No hooks. |
@@ -31,12 +32,10 @@ Proved, kernel-checked, no `sorry`, standard axioms only (`scripts/audit`):
 
 Not yet proved:
 
-- Machine-code refinement of the two entry points `chachapoly_encrypt` / `chachapoly_decrypt`
-  (key setup, AAD/ciphertext MAC, tag comparison). Their contracts are written
-  (`aeadEncryptContract` / `aeadDecryptContract` in `Spec/Contracts.lean`), and every function they
-  call is now proved, including musl's `memcpy` / `memset`.
-- Consequently there is **no end-to-end theorem about the entry points yet**, and the symbolic
-  integrity theorem is about the Lean construction, not yet transferred to the binary.
+- Machine-code refinement of the decryption entry point `chachapoly_decrypt` (its contract
+  `aeadDecryptContract` is written; every function it calls is proved).
+- Consequently the symbolic integrity theorem is about the Lean construction and is not yet
+  transferred to the binary (that needs the decryption theorem).
 
 ## Target
 
@@ -100,7 +99,15 @@ comparator/run.sh
   checked in the kernel against the RFC's vectors for the quarter round, block function,
   encryption, Poly1305, key generation and the AEAD (`RFC8439Vectors.lean`).
 - **Memory model of the contracts**: byte-granular separation logic; each contract names the
-  memory it owns, including its stack frame (144 bytes for the block function).
+  memory it owns, including its stack frame (144 bytes for the block function, `0x4a0` bytes for
+  `chachapoly_encrypt`). The entry-point contracts own the key, nonce, associated data, buffer and
+  tag as separate byte slices, so they apply when these do not overlap. They also own, read-only,
+  the 16-byte ChaCha constant `"expand 32-byte k"` at its placed address in the library's
+  `.rodata`; loading the ELF establishes it (`MultiPlacedLib.satisfies_dataRO_of_inElf`).
+- **Length bounds**: messages of at most `maxMsgLen = 274,877,906,816` bytes (so the 32-bit block
+  counter, started at 1, cannot overflow; RustCrypto's own guard only rejects lengths of at least
+  `274,877,906,880`, and on the 63 lengths in between the binary panics), and associated data of
+  fewer than `2^63` bytes.
 - **Hooks**: none. musl's AArch64 `memcpy` and `memset` (called by the entry points to pad a
   partial Poly1305 block) are not hooked: their machine code is extracted into the library as
   blocks 11 and 12 (`memcpy.lo` / `memset.lo` from the toolchain's self-contained `libc.a`,
