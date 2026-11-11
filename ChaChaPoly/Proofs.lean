@@ -26,3 +26,4 @@ public import ChaChaPoly.Proofs.EncryptMac
 public import ChaChaPoly.Proofs.EncryptBytes
 public import ChaChaPoly.Proofs.EncryptModel
 public import ChaChaPoly.Proofs.Encrypt
+public import ChaChaPoly.Proofs.DecryptMac
