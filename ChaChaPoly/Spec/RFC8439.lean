@@ -164,4 +164,19 @@ def aeadDecrypt (key nonce aad ct tag : Bytes) : Option Bytes :=
     some (chacha20Encrypt key 1 nonce ct)
   else none
 
+/-! ## Key stream from an explicit state (used by the machine-code contracts) -/
+
+/-- The 64-byte key-stream block of a ChaCha state (§2.3, after `initState`). -/
+def stateBlock (s : State) : Bytes := ((iter doubleRound 10 s).add s).bytes
+
+/-- `s` with its block counter (word 12) advanced by `n`. -/
+def State.advance (s : State) (n : Nat) : State := { s with x12 := s.x12 + BitVec.ofNat 32 n }
+
+/-- XOR `data` with the key stream of `s`, `s.advance 1`, … (§2.4 from an explicit state). -/
+def streamXor (s : State) (data : Bytes) : Bytes :=
+  if _ : data.length ≤ 64 then xorBytes data (stateBlock s)
+  else xorBytes (data.take 64) (stateBlock s) ++ streamXor (s.advance 1) (data.drop 64)
+termination_by data.length
+decreasing_by simp only [List.length_drop]; omega
+
 end ChaChaPoly.Spec

@@ -182,4 +182,23 @@ theorem aead_roundtrip (key nonce aad pt : Bytes) :
   rw [aeadEncrypt_eq, aeadDecrypt_eq]
   exact Aead.roundtrip rfcPrims (fun k n d => chacha20Encrypt_involutive k n _ 1 d rfl) key nonce aad pt
 
+/-! ## ChaCha20 encryption as a key stream from the initial state -/
+
+theorem initState_advance (key : Bytes) (c : BitVec 32) (nonce : Bytes) :
+    (initState key c nonce).advance 1 = initState key (c + 1) nonce := by
+  simp [State.advance, initState]
+
+theorem chacha20Encrypt_eq_streamXor (key nonce : Bytes) :
+    ∀ (n : Nat) (counter : BitVec 32) (data : Bytes), data.length = n →
+      chacha20Encrypt key counter nonce data = streamXor (initState key counter nonce) data := by
+  intro n
+  induction n using Nat.strongRecOn with
+  | _ n ih =>
+    intro counter data hn
+    by_cases h : data.length ≤ 64
+    · rw [chacha20Encrypt_short _ _ _ _ h, streamXor, dif_pos h]; rfl
+    · rw [chacha20Encrypt_long _ _ _ _ h, streamXor, dif_neg h,
+        ih (data.drop 64).length (by simp; omega) _ _ rfl, initState_advance]
+      rfl
+
 end ChaChaPoly.Spec
