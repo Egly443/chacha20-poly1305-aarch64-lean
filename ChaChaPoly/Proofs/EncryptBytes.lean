@@ -30,9 +30,11 @@ theorem write32_pack32 (dst : List (BitVec 8)) (o : Nat) (b0 b1 b2 b3 : BitVec 8
   congr 1
   exact unpack32_pack32 b0 b1 b2 b3
 
-theorem pair_copy (D src : List (BitVec 8)) (o : Nat) (hD : D.length = 16) (h : o + 16 ≤ src.length) :
-    ByteSlice.write64 (ByteSlice.write64 D 0 (ByteSlice.readLE src o 8)) 8 (ByteSlice.readLE src (o + 8) 8) =
+theorem pair_copy (D src : List (BitVec 8)) (o o' : Nat) (ho : o' = o + 8) (hD : D.length = 16)
+    (h : o + 16 ≤ src.length) :
+    ByteSlice.write64 (ByteSlice.write64 D 0 (ByteSlice.readLE src o 8)) 8 (ByteSlice.readLE src o' 8) =
       ProofLib.ByteSlice.slice src o 16 := by
+  subst ho
   rw [write64_readLE _ _ _ _ (by omega), write64_readLE _ _ _ _ (by omega)]
   apply List.ext_getElem
   · simp [ProofLib.ByteSlice.write, ProofLib.ByteSlice.slice]; omega

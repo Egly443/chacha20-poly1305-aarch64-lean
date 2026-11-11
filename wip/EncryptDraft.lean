@@ -492,12 +492,6 @@ theorem SepWP.encFrame_close {prog : Program} {t : BitVec 64} {s : Arm64.State} 
     SepWP prog t s P post oom :=
   SepWP.weaken_pre (Entails.trans hf (sepConj_mono_left (encFrame_fold b ..))) h
 
-theorem SepWP.foldPart {prog : Program} {t : BitVec 64} {s : Arm64.State} {P T T' F : SepProp}
-    {post : Arm64.State → SepProp → Prop} {oom : Arm64.State → SepProp}
-    (hent : T ⊢ T') (hf : P = T ∗ F) (h : SepWP prog t s (T' ∗ F) post oom) :
-    SepWP prog t s P post oom :=
-  SepWP.weaken_pre (hf ▸ sepConj_mono_left hent) h
-
 theorem aligned_sub {x : BitVec 64} (h : (x &&& 15#64 == 0#64) = true) (k : Nat)
     (hk : k % 16 = 0) (hk2 : k < 2 ^ 64) : ((x - BitVec.ofNat 64 k) &&& 15#64 == 0#64) = true := by
   simp only [beq_iff_eq] at h ⊢
@@ -537,7 +531,7 @@ theorem encrypt_draft [CpPlacement] :
   refine Proofs.SepWP.memRegion_bytes (s0.sp - 1184#64 + 960#64) 64 (by decide) (by sep_focus) fun cb0 hcb0 => ?_
   refine Proofs.SepWP.memRegion_bytes (s0.sp - 1184#64 + 1040#64) 32 (by decide) (by sep_focus) fun mk0 hmk0 => ?_
   wp_steps 129
-  refine SepWP.foldPart (encState_fold (s0.sp - 288#64) k n cs0 cb0 (by assumption) (by assumption)
+  refine Proofs.SepWP.foldPart (encState_fold (s0.sp - 288#64) k n cs0 cb0 (by assumption) (by assumption)
     hcs0 hcb0) (by sep_focus) ?_
   refine SepWP.done (by simp [wp_norm, arm64_norm]) (by simp [wp_norm, arm64_norm, hrun]) ?_
   intro hcl
@@ -607,26 +601,107 @@ theorem encrypt_draft [CpPlacement] :
       refine SepWP.exists_elim fun pw => SepWP.exists_elim fun pl => ?_
       refine SepWP.pure_elim fun ⟨hpw, hpl⟩ => ?_
       rw [stateAt_eq_bytes (s0.sp - 288#64), stateAt_eq_bytes (s0.sp - 224#64)]
-      refine SepWP.foldPart (Entails.of_eq_explicit (SepFrameInfer.memRegion_merge (s0.sp - 420#64)
+      refine Proofs.SepWP.foldPart (Entails.of_eq_explicit (SepFrameInfer.memRegion_merge (s0.sp - 420#64)
         (s0.sp - 291#64) 129 3 132 (by bv_omega) rfl (by decide))) (by sep_focus) ?_
-      refine Proofs.SepWP.memRegion_bytes (s0.sp - 420#64) 132 (by decide) (by sep_focus) fun cc0 hcc0 => ?_
+      refine Proofs.SepWP.foldPart (Entails.of_eq_explicit (memRegion_partition (s0.sp - 420#64) 132
+        [16, 32, 48, 64, 80, 96, 112, 128])) (by sep_focus) ?_
+      refine Proofs.SepWP.memRegion_bytes (s0.sp - 420#64 + 0#64) 16 (by decide) (by sep_focus) fun q0 hq0 => ?_
+      refine Proofs.SepWP.memRegion_bytes (s0.sp - 420#64 + 16#64) 16 (by decide) (by sep_focus) fun q1 hq1 => ?_
+      refine Proofs.SepWP.memRegion_bytes (s0.sp - 420#64 + 32#64) 16 (by decide) (by sep_focus) fun q2 hq2 => ?_
+      refine Proofs.SepWP.memRegion_bytes (s0.sp - 420#64 + 48#64) 16 (by decide) (by sep_focus) fun q3 hq3 => ?_
+      refine Proofs.SepWP.memRegion_bytes (s0.sp - 420#64 + 64#64) 16 (by decide) (by sep_focus) fun q4 hq4 => ?_
+      refine Proofs.SepWP.memRegion_bytes (s0.sp - 420#64 + 80#64) 16 (by decide) (by sep_focus) fun q5 hq5 => ?_
+      refine Proofs.SepWP.memRegion_bytes (s0.sp - 420#64 + 96#64) 16 (by decide) (by sep_focus) fun q6 hq6 => ?_
+      refine Proofs.SepWP.memRegion_bytes (s0.sp - 420#64 + 112#64) 16 (by decide) (by sep_focus) fun q7 hq7 => ?_
+      refine Proofs.SepWP.memRegion_bytes (s0.sp - 420#64 + 128#64) 4 (by decide) (by sep_focus) fun qp hqp => ?_
       refine Proofs.SepWP.memRegion_bytes (s0.sp - 159#64) 15 (by decide) (by sep_focus) fun pr hpr => ?_
-      refine SepWP.foldPart (Entails.of_eq_explicit (pointsToBytes_cons (s0.sp - 160#64) 32#8 pr).symm)
+      refine Proofs.SepWP.foldPart (Entails.of_eq_explicit (pointsToBytes_cons (s0.sp - 160#64) 32#8 pr).symm)
         (by sep_focus) ?_
       have hmkl : (streamXor (initState k 0 n) (List.replicate 32 0#8)).length = 32 := by
         rw [streamXor_length _ _ _ rfl]; simp
       have hkbl : kb.bytes.length = 64 := by simp [Spec.State.bytes, word32Bytes]
       have hsl : ((initState k 0 n).advance (((List.replicate 32 0#8).length + 63) / 64)).bytes.length = 64 := by
         simp [Spec.State.bytes, word32Bytes]
-      generalize streamXor (initState k 0 n) (List.replicate 32 0#8) = mk at *
-      generalize kb.bytes = kbb at *
-      generalize ((initState k 0 n).advance (((List.replicate 32 0#8).length + 63) / 64)).bytes = sb at *
+      have h1blk : ((List.replicate 32 0#8).length + 63) / 64 = 1 := by simp
+      simp only [h1blk] at hsl ⊢
+      generalize hmkeq : streamXor (initState k 0 n) (List.replicate 32 0#8) = mk at *
+      generalize hkbeq : kb.bytes = kbb at *
+      generalize hsbeq : ((initState k 0 n).advance 1).bytes = sb at *
       wp_steps
       refine SepWP.done (by simp [wp_norm, arm64_norm]) (by simp [wp_norm, arm64_norm, hrunf2]) ?_
       intro hcl3
       have hml : msg.length ≤ maxMsgLen := by assumption
       have hlo : (BitVec.ofNat 64 msg.length).ult 274877906880#64 = true := by
         simp only [maxMsgLen] at hml; simp [BitVec.ult]; omega
-      wp_steps 3
-      trace_state
-      sorry
+      wp_steps 1
+      refine MultiPlacedLib.seq_codeLoaded (mid := cpPl6.base + 0x360#64) (by simpa [wp_norm, arm64_norm] using hcl3) ?_
+      refine Proofs.SepWP.foldPart (pointsTo64_entails_memRegion (s0.sp - 616#64) _) (by sep_focus) ?_
+      have hsbl : (ByteSlice.write32 sb 48 1#32).length = 64 := by simp [hsl]
+      rw [show ((s0.sp - 288#64) ↦ₛ ByteSlice.write32 sb 48 1#32) =
+          ((s0.sp - 288#64) ↦ₛ (ByteSlice.write32 sb 48 1#32).take 16) ∗
+          ((s0.sp - 288#64 + 16#64) ↦ₛ (ByteSlice.write32 sb 48 1#32).drop 16) by
+        conv => lhs; rw [← List.take_append_drop 16 (ByteSlice.write32 sb 48 1#32)]
+        rw [pointsToBytes_append, show ((ByteSlice.write32 sb 48 1#32).take 16).length = 16 by simp; omega]]
+      refine SepWP.mono (SepWP.weaken_pre ?_ (macAad_ok ?FA _ aad (s0.sp - 288#64) a
+        ((ByteSlice.write32 sb 48 1#32).take 16) (clamp (leNat (mk.take 16))) 0 pl
+        (by simp [wp_norm, arm64_norm]) (by simp [wp_norm, arm64_norm, hrunf2])
+        (by simp [wp_norm, arm64_norm, hspf2]; simpa using hsp_align)
+        (by simpa [wp_norm, arm64_norm] using hcl3)
+        (by simp [wp_norm, arm64_norm, d21]) (by simp [wp_norm, arm64_norm, d23])
+        (by simp [wp_norm, arm64_norm, d29]; try bv_omega) (by assumption) (by simp; omega) hpl)) ?_
+      · try simp only [wp_norm, arm64_norm, hspf2]
+        simp only [← sepConj_assoc]
+        sep_frame
+      intro sf3 Pf3 hpc3 hrun3 ⟨hk3, hQ3⟩ hcl4
+      refine SepWP.weaken_pre hQ3 ?_
+      refine SepWP.exists_elim fun l1 => SepWP.exists_elim fun blk1 => ?_
+      refine SepWP.pure_elim fun ⟨hl1, hblk1⟩ => ?_
+      rw [pair_copy q0 sb 0 8 rfl hq0 (by omega), pair_copy q1 sb 16 24 rfl hq1 (by omega),
+        pair_copy q2 _ 32 40 rfl hq2 (by omega), pair_copy q3 _ 48 56 rfl hq3 (by omega),
+        pair_copy q4 kbb 0 8 rfl hq4 (by omega), pair_copy q5 kbb 16 24 rfl hq5 (by omega),
+        pair_copy q6 kbb 32 40 rfl hq6 (by omega), pair_copy q7 kbb 48 56 rfl hq7 (by omega),
+        quad_pack qp _ _ _ _ hqp, ← slice_write32_lo sb 0 (by omega) hsl,
+        ← slice_write32_lo sb 16 (by omega) hsl]
+      refine Proofs.SepWP.foldPart (Entails.of_eq_explicit (four_slices (s0.sp - 420#64) _ hsbl))
+        (by sep_focus) ?_
+      refine Proofs.SepWP.foldPart (Entails.of_eq_explicit (four_slices (s0.sp - 356#64) _ hkbl))
+        (by sep_focus) ?_
+      rw [← hsbeq, advance1_bytes, ← stateAt_eq_bytes, ← hkbeq, ← stateAt_eq_bytes]
+      have hw8 : ByteSlice.write8 (32#8 :: pr) 0 0#8 = 0#8 :: pr := rfl
+      simp only [hw8, List.getD_cons_zero, List.getD_cons_succ]
+      rw [pointsToBytes_cons]
+      have hml : msg.length ≤ maxMsgLen := by assumption
+      simp only [maxMsgLen] at hml
+      refine MultiPlacedLib.seq_codeLoaded (mid := cpPl6.base + 0x370#64) (by simpa [wp_norm, arm64_norm] using hcl4) ?_
+      obtain ⟨k1s, k20, k21, k22, k23, k24, k25, k29, kv⟩ := hk3
+      simp only [wp_norm, arm64_norm] at k1s k20 k21 k22 k23 k24 k25 k29 kv
+      wp_steps 4
+      rw [show cpPl6.base + 876#64 + (cpPl4.base - cpPl6.base - 876#64) = cpPl4.base by bv_omega]
+      show SepWP (chachapolyLib.blockProgram cpMpl 6) _ _ _ _ _
+      refine MultiPlacedLib.sepWP_call_block (j := 4) (by decide) ak_blk_ok
+        (x := ⟨s0.sp - 420#64, buf, msg, initState k 1 n, kb⟩)
+        (ret_pc := cpPl6.base + 880#64) (F := ?F3)
+        (by simpa [wp_norm, arm64_norm] using hcl4) (by simp [wp_norm, arm64_norm])
+        (by simp [wp_norm, arm64_norm, hrun3]) (by simp [wp_norm, arm64_norm, State.spAligned, k1s, hspf2]; simpa using hsp_align)
+        (by simp [wp_norm, arm64_norm]) ?_
+        (fun _ _ _ hp => not_satisfies_false_sepConj hp) (fun _ _ _ _ he => not_satisfies_false_sepConj he) ?_
+      rotate_left
+      · intro R hm
+        simp only [MultiPlacedLib.withCodeLoaded, applyKeystreamContract, stackFrame]
+        simp only [wp_norm, arm64_norm, and_self, pure_true_sepConj, sepConj_pure_true, k1s, k20, k22, k24,
+          d20, d22, d24, hspf2] at hm hcl4 ⊢
+        refine ⟨⟨⟨by omega, by simp [initState]; omega⟩, hcl4⟩, ?_⟩
+        simp only [← sepConj_assoc] at hm ⊢
+        refine Satisfies.mono (sepConj_mono_left ?_) hm
+        simp only [sepConj_assoc]
+        sep_frame
+      · intro sf4 hpcf4 hrunf4 hspf4 hcsf4
+        show SepWP cpProg6r _ _ _ _ _
+        simp only [MultiPlacedLib.withCodeLoaded, applyKeystreamContract, stackFrame, wp_norm,
+          arm64_norm] at hspf4 hcsf4 ⊢
+        obtain ⟨f19, f20, f21, f22, f23, f24, f25, f26, f27, f28, f29, fv⟩ := hcsf4
+        simp only [wp_norm, arm64_norm] at f19 f20 f21 f22 f23 f24 f25 f26 f27 f28 f29 fv hspf4
+        refine SepWP.done (by simp [wp_norm, arm64_norm, hpcf4]) hrunf4 ?_
+        intro hcl5
+        trace_state
+        sorry
