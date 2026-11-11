@@ -124,3 +124,14 @@ comparator/run.sh
   ChaCha20 code is scalar. The proofs are about the resulting bytes, whatever the flags.
 
 Out of scope: computational reductions, multi-message security, side channels, protocols.
+
+## License and acknowledgements
+
+Copyright 2026 Brian Sanders. Licensed under the [Apache License, Version 2.0](LICENSE), the
+same license as the upstream code it builds on; see [NOTICE](NOTICE).
+
+This work is built on [google-deepmind/code-verification](https://github.com/google-deepmind/code-verification)
+(Copyright 2026 Google LLC, Apache 2.0): its AArch64 semantics, proof library, verified musl
+routines, `rust-obj2lean` extractor and comparator setup make these proofs possible. Thanks to
+its authors. The pinned binary also contains compiled code from RustCrypto's crates, the Rust
+standard library and musl, under their own (MIT / Apache-2.0) licenses.

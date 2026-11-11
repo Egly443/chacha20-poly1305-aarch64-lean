@@ -1,0 +1,16 @@
+chacha20-poly1305-aarch64-lean
+Copyright 2026 Brian Sanders
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This project builds on google-deepmind/code-verification
+(https://github.com/google-deepmind/code-verification), pinned as the submodule
+third_party/code-verification: its AArch64 semantics (arm64-semantics), proof library (ProofLib),
+verified musl memcpy/memset proofs (VerifiedLibraries), rust-obj2lean extractor and comparator
+setup. That code is Copyright 2026 Google LLC and licensed under the Apache License, Version 2.0;
+see third_party/code-verification/LICENSE and its README for its terms and third-party notices.
+
+The pinned binary impl/chachapoly_cli.elf and the extracted code in ChaChaPoly/Generated contain
+compiled code from the RustCrypto crates chacha20poly1305, chacha20, poly1305 and their
+dependencies (MIT or Apache-2.0), the Rust standard library 1.98.1 (MIT or Apache-2.0) and
+musl 1.2.5 (MIT), under their respective licenses.
