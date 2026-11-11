@@ -17,6 +17,7 @@ namespace ChaChaPoly.Proofs
 open Arm64 ProofLib ChaChaPoly ChaChaPoly.Spec
 
 set_option maxRecDepth 400000
+set_option maxHeartbeats 8000000
 set_option linter.unusedSimpArgs false
 
 theorem write64_readLE (dst src : List (BitVec 8)) (o o' : Nat) (h : o' + 8 ≤ src.length) :
