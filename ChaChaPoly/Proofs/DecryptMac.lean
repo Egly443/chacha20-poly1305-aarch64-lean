@@ -288,7 +288,7 @@ theorem daadTail_ok [CpPlacement] (F : SepProp) (sm : Arm64.State) (aad scr : Bi
 def dmacKeepsA (sm st : Arm64.State) : Prop :=
   st.sp = sm.sp ∧ st.readReg64 .x19 = sm.readReg64 .x19 ∧ st.readReg64 .x21 = sm.readReg64 .x21 ∧
   st.readReg64 .x22 = sm.readReg64 .x20 ∧ st.readReg64 .x23 = sm.readReg64 .x23 ∧
-  st.readReg64 .x25 = sm.readReg64 .x25 ∧ st.readReg64 .x29 = sm.readReg64 .x29 ∧
+  st.readReg64 .x24 = sm.readReg64 .x27 ∧ st.readReg64 .x25 = sm.readReg64 .x25 ∧ st.readReg64 .x29 = sm.readReg64 .x29 ∧
   calleeSavedVRegs st = calleeSavedVRegs sm
 
 theorem dmacAad_ok [CpPlacement] (F : SepProp) (sm : Arm64.State) (aad scr : BitVec 64)
@@ -334,7 +334,7 @@ theorem dmacAad_ok [CpPlacement] (F : SepProp) (sm : Arm64.State) (aad scr : Bit
     simp only [dmacKeeps, wp_norm, arm64_norm] at hk
     refine ⟨?_, Entails.trans hQ ?_⟩
     · obtain ⟨k1, k19, k21, k22, k23, k24, k25, k26, k27, k29, kv⟩ := hk
-      exact ⟨k1, k19, k21, k22, k23, k25, k29, kv⟩
+      exact ⟨k1, k19, k21, k22, k23, by rw [k24, h21], k25, k29, kv⟩
     · simp only [wp_norm, arm64_norm, show BitVec.ofNat 64 0 = 0#64 from rfl, BitVec.add_zero]
       exact Entails.refl _
   · obtain ⟨j, hj⟩ : ∃ j, A.length / 16 = j + 1 := ⟨A.length / 16 - 1, by omega⟩
@@ -377,6 +377,7 @@ theorem dmacAad_ok [CpPlacement] (F : SepProp) (sm : Arm64.State) (aad scr : Bit
     simp only [dmacKeeps] at hk
     obtain ⟨g1, g19, g21, g22, g23, g24, g25, g26, g27, g29, gv⟩ := hk
     refine ⟨⟨by rw [g1, k1], by rw [g19, k19], by rw [g21, k21], by rw [g22, k22], by rw [g23, k23],
+      by rw [g24, k24]; (try rw [h21]),
       by rw [g25, k25], by rw [g29, k29], by rw [gv, kv]⟩, Entails.trans hQ ?_⟩
     simp only [k1]
     refine Entails.sepExists_elim fun l' => Entails.sepExists_elim fun b' => ?_
@@ -637,7 +638,8 @@ theorem dctTail_ok [CpPlacement] (F : SepProp) (sm : Arm64.State) (aad scr : Bit
 /-- Registers decrypt's ciphertext pass leaves unchanged (`x24` still holds the AAD length). -/
 def dmacKeepsT (sm st : Arm64.State) : Prop :=
   st.sp = sm.sp ∧ st.readReg64 .x19 = sm.readReg64 .x19 ∧ st.readReg64 .x21 = sm.readReg64 .x21 ∧
-  st.readReg64 .x22 = sm.readReg64 .x22 ∧ st.readReg64 .x24 = sm.readReg64 .x24 ∧
+  st.readReg64 .x22 = sm.readReg64 .x22 ∧ st.readReg64 .x23 = sm.readReg64 .x22 ∧
+  st.readReg64 .x24 = sm.readReg64 .x24 ∧
   st.readReg64 .x25 = sm.readReg64 .x25 ∧ st.readReg64 .x29 = sm.readReg64 .x29 ∧
   calleeSavedVRegs st = calleeSavedVRegs sm
 
@@ -684,7 +686,7 @@ theorem dmacCt_ok [CpPlacement] (F : SepProp) (sm : Arm64.State) (aad scr : BitV
     simp only [dmacKeepsC, wp_norm, arm64_norm] at hk
     refine ⟨?_, Entails.trans hQ ?_⟩
     · obtain ⟨k1, k19, k21, k22, k23, k24, k25, k26, k28, k29, kv⟩ := hk
-      exact ⟨k1, k19, k21, k22, k24, k25, k29, kv⟩
+      exact ⟨k1, k19, k21, k22, by rw [k23, h23], k24, k25, k29, kv⟩
     · simp only [wp_norm, arm64_norm, show BitVec.ofNat 64 0 = 0#64 from rfl, BitVec.add_zero]
       exact Entails.refl _
   · obtain ⟨j, hj⟩ : ∃ j, A.length / 16 = j + 1 := ⟨A.length / 16 - 1, by omega⟩
@@ -727,7 +729,7 @@ theorem dmacCt_ok [CpPlacement] (F : SepProp) (sm : Arm64.State) (aad scr : BitV
     intro sf Pf _ _ ⟨hk, hQ⟩
     simp only [dmacKeepsC] at hk
     obtain ⟨g1, g19, g21, g22, g23, g24, g25, g26, g28, g29, gv⟩ := hk
-    refine ⟨⟨by rw [g1, k1], by rw [g19, k19], by rw [g21, k21], by rw [g22, k22], by rw [g24, k24],
+    refine ⟨⟨by rw [g1, k1], by rw [g19, k19], by rw [g21, k21], by rw [g22, k22], by rw [g23, k23]; (try rw [h23]), by rw [g24, k24],
       by rw [g25, k25], by rw [g29, k29], by rw [gv, kv]⟩, Entails.trans hQ ?_⟩
     simp only [k1]
     refine Entails.sepExists_elim fun l' => Entails.sepExists_elim fun b' => ?_
