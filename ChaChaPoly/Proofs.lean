@@ -14,3 +14,4 @@ public import ChaChaPoly.Proofs.Helpers
 public import ChaChaPoly.Proofs.ApplyKeystream1
 public import ChaChaPoly.Proofs.ApplyKeystream2
 public import ChaChaPoly.Proofs.ApplyKeystream3
+public import ChaChaPoly.Proofs.ApplyKeystream4
