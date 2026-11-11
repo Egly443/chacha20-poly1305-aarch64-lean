@@ -10,3 +10,4 @@ public import ChaChaPoly.Proofs.Poly1305FinalMath
 public import ChaChaPoly.Proofs.Poly1305New
 public import ChaChaPoly.Proofs.Poly1305NewMath
 public import ChaChaPoly.Proofs.Poly1305ProcBlock
+public import ChaChaPoly.Proofs.Helpers

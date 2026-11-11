@@ -88,6 +88,22 @@ theorem poly1305_proc_block_refines (mpl : MultiPlacement) (hpl : chachapolyLib.
       (chachapolyLib.withCodeLoaded mpl polyProcBlockContract) :=
   sorry
 
+set_option maxRecDepth 200000 in
+/-- **`subtle::black_box::<u8>` (machine code).** Returns its byte argument. No hooks. -/
+theorem black_box_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Placeable mpl) :
+    subroutine_ok (chachapolyLib.blockProgram mpl 0)
+      (chachapolyLib.fnAddr mpl blackBoxSym)
+      (chachapolyLib.withCodeLoaded mpl blackBoxContract) :=
+  sorry
+
+set_option maxRecDepth 200000 in
+/-- **`Cipher` drop glue (machine code).** Owns and returns the 129-byte key-stream state. No hooks. -/
+theorem cipher_drop_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Placeable mpl) :
+    subroutine_ok (chachapolyLib.blockProgram mpl 1)
+      (chachapolyLib.fnAddr mpl cipherDropSym)
+      (chachapolyLib.withCodeLoaded mpl cipherDropContract) :=
+  sorry
+
 /-- **Round trip (model).** RFC 8439 decryption inverts encryption on all inputs. -/
 theorem aead_roundtrip (key nonce aad pt : Bytes) :
     aeadDecrypt key nonce aad (aeadEncrypt key nonce aad pt).1 (aeadEncrypt key nonce aad pt).2 =

@@ -108,6 +108,32 @@ theorem poly1305_proc_block_refines (mpl : MultiPlacement) (hpl : chachapolyLib.
   rw [hfn]
   exact @Proofs.polyProcBlockContract_ok ⟨mpl, hpl⟩
 
+set_option maxRecDepth 200000 in
+/-- **`subtle::black_box::<u8>` (machine code).** Returns its byte argument. No hooks. -/
+theorem black_box_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Placeable mpl) :
+    subroutine_ok (chachapolyLib.blockProgram mpl 0)
+      (chachapolyLib.fnAddr mpl blackBoxSym)
+      (chachapolyLib.withCodeLoaded mpl blackBoxContract) := by
+  have hfn : chachapolyLib.fnAddr mpl blackBoxSym = mpl.base 0 := by
+    have h : lookupBlockSym blackBoxSym chachapolyLib.blocks = some (0, 0) := by
+      decide +kernel
+    simp [MultiPlacedLib.fnAddr, h]
+  rw [hfn]
+  exact @Proofs.blackBox_ok ⟨mpl, hpl⟩
+
+set_option maxRecDepth 200000 in
+/-- **`Cipher` drop glue (machine code).** Owns and returns the 129-byte key-stream state. No hooks. -/
+theorem cipher_drop_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Placeable mpl) :
+    subroutine_ok (chachapolyLib.blockProgram mpl 1)
+      (chachapolyLib.fnAddr mpl cipherDropSym)
+      (chachapolyLib.withCodeLoaded mpl cipherDropContract) := by
+  have hfn : chachapolyLib.fnAddr mpl cipherDropSym = mpl.base 1 := by
+    have h : lookupBlockSym cipherDropSym chachapolyLib.blocks = some (1, 0) := by
+      decide +kernel
+    simp [MultiPlacedLib.fnAddr, h]
+  rw [hfn]
+  exact @Proofs.cipherDrop_ok ⟨mpl, hpl⟩
+
 /-- **Round trip (model).** RFC 8439 decryption inverts encryption on all inputs. -/
 theorem aead_roundtrip (key nonce aad pt : Bytes) :
     aeadDecrypt key nonce aad (aeadEncrypt key nonce aad pt).1 (aeadEncrypt key nonce aad pt).2 =

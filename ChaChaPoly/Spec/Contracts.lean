@@ -178,4 +178,26 @@ def polyProcBlockContract : Spec (BitVec 64 × BitVec 64 × Bytes × Nat × Nat)
       (blk ↦ₛ bs) ∗ polyLimbsAt st l
   post := polyBlockContract.post
 
+/-! ## Helpers: `subtle::black_box` and the cipher's drop glue -/
+
+/-- The demangled name of `subtle::black_box::<u8>` in the pinned object. -/
+def blackBoxSym : String := "subtle::black_box::<u8>"
+
+/-- Contract of `subtle::black_box::<u8>(x: u8) -> u8` (an optimisation barrier used by the
+    constant-time tag comparison): returns its argument, using a 16-byte stack frame. -/
+def blackBoxContract : Spec (BitVec 8) where
+  pre := fun b s0 => ⌜(s0.readReg64 .x0).truncate 8 = b⌝ ∗ stackFrame s0 16
+  post := fun b s0 sf => ⌜sf.readReg64 .x0 = b.zeroExtend 64⌝ ∗ stackFrame s0 16
+
+/-- The demangled name of the drop glue of RustCrypto's `chacha20poly1305::cipher::Cipher`. -/
+def cipherDropSym : String :=
+  "core::ptr::drop_glue::<chacha20poly1305::cipher::Cipher<cipher::stream_wrapper::StreamCipherCoreWrapper<chacha20::ChaChaCore<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UInt<typenum::uint::UTerm, typenum::bit::B1>, typenum::bit::B0>, typenum::bit::B1>, typenum::bit::B0>>>>>"
+
+/-- Contract of the `Cipher` drop glue: it owns the 129 bytes at offset `0x38` of the cipher
+    (the ChaCha state and the key-stream buffer) and gives them back. (The code zeroises them;
+    that memory-hygiene property is not claimed here.) -/
+def cipherDropContract : Spec (BitVec 64) where
+  pre := fun c s0 => ⌜s0.readReg64 .x0 = c⌝ ∗ memRegion (c + 56#64) 129
+  post := fun c _ _ => memRegion (c + 56#64) 129
+
 end ChaChaPoly.Spec
