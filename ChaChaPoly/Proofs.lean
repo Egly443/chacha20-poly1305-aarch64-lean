@@ -16,3 +16,4 @@ public import ChaChaPoly.Proofs.ApplyKeystream2
 public import ChaChaPoly.Proofs.ApplyKeystream3
 public import ChaChaPoly.Proofs.ApplyKeystream4
 public import ChaChaPoly.Proofs.ApplyKeystream5
+public import ChaChaPoly.Proofs.ApplyKeystream6
