@@ -93,10 +93,6 @@ def finOut3 : BitVec 32 :=
 
 end Model
 
-/-- Four little-endian 32-bit words at `p`. -/
-def words4At (p : BitVec 64) (w0 w1 w2 w3 : BitVec 32) : SepProp :=
-  (p ↦₃₂ w0) ∗ ((p + 4#64) ↦₃₂ w1) ∗ ((p + 8#64) ↦₃₂ w2) ∗ ((p + 12#64) ↦₃₂ w3)
-
 structure PolyFinalGhost where
   st : BitVec 64
   out : BitVec 64

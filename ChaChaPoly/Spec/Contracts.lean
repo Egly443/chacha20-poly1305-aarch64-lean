@@ -100,4 +100,45 @@ def polyBlockContract : Spec (BitVec 64 × BitVec 64 × Bytes × Nat × Nat) whe
     ∃∗ l : PolyLimbs,
       ⌜l.Rep r ((acc + leNat (bs ++ [1])) * r % p1305)⌝ ∗ (blk ↦ₛ bs) ∗ polyLimbsAt st l
 
+/-! ## Poly1305 finalisation -/
+
+/-- Four little-endian 32-bit words at `p`. -/
+def words4At (p : BitVec 64) (w0 w1 w2 w3 : BitVec 32) : SepProp :=
+  (p ↦₃₂ w0) ∗ ((p + 4#64) ↦₃₂ w1) ∗ ((p + 8#64) ↦₃₂ w2) ∗ ((p + 12#64) ↦₃₂ w3)
+
+/-- The 128-bit little-endian value of four 32-bit words. -/
+def words4Val (w0 w1 w2 w3 : BitVec 32) : Nat :=
+  w0.toNat + 2 ^ 32 * w1.toNat + 2 ^ 64 * w2.toNat + 2 ^ 96 * w3.toNat
+
+/-- The demangled name of the Poly1305 finalisation in the pinned object. -/
+def polyFinalizeSym : String := "<poly1305::Poly1305 as universal_hash::UniversalHash>::finalize"
+
+/-- Ghost state of a `finalize` call: state pointer `st` (`x0`), output pointer `out` (`x8`,
+    the AAPCS64 indirect-result register), the pad `s` stored at `st` as four words, the
+    accumulator limbs `h` at `st + 0x24`, and the previous contents of the output. -/
+structure PolyFinalArgs where
+  st : BitVec 64
+  out : BitVec 64
+  (s0 s1 s2 s3 h0 h1 h2 h3 h4 o0 o1 o2 o3 : BitVec 32)
+
+/-- Contract of `<Poly1305 as UniversalHash>::finalize(self) -> Tag`.
+
+    If the accumulator limbs are within the representation bounds, the 16-byte tag written to
+    `out` is `(acc mod (2^130 - 5) + s) mod 2^128` (RFC 8439 §2.5.1, the last step of
+    `poly1305Mac`), where `acc` is the limbs' value and `s` the pad's. The state is only read. -/
+def polyFinalContract : Spec PolyFinalArgs where
+  pre := fun a s0 =>
+    ⌜s0.readReg64 .x0 = a.st ∧ s0.readReg64 .x8 = a.out ∧
+      a.h0.toNat < 2 ^ 26 ∧ a.h1.toNat < 2 ^ 26 + 64 ∧ a.h2.toNat < 2 ^ 26 ∧
+      a.h3.toNat < 2 ^ 26 ∧ a.h4.toNat < 2 ^ 26⌝ ∗
+    words4At a.st a.s0 a.s1 a.s2 a.s3 ∗ limbsAt (a.st + 36#64) a.h0 a.h1 a.h2 a.h3 a.h4 ∗
+    words4At a.out a.o0 a.o1 a.o2 a.o3
+  post := fun a _ _ =>
+    words4At a.st a.s0 a.s1 a.s2 a.s3 ∗ limbsAt (a.st + 36#64) a.h0 a.h1 a.h2 a.h3 a.h4 ∗
+    ∃∗ t : BitVec 32 × BitVec 32 × BitVec 32 × BitVec 32,
+      ⌜words4Val t.1 t.2.1 t.2.2.1 t.2.2.2 =
+        (limbVal a.h0.toNat a.h1.toNat a.h2.toNat a.h3.toNat a.h4.toNat % p1305 +
+          words4Val a.s0 a.s1 a.s2 a.s3) % 2 ^ 128⌝ ∗
+      words4At a.out t.1 t.2.1 t.2.2.1 t.2.2.2
+
 end ChaChaPoly.Spec

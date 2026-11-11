@@ -61,6 +61,22 @@ theorem poly1305_block_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Place
   rw [hfn]
   exact @Proofs.polyBlockContract_ok ⟨mpl, hpl⟩
 
+set_option maxRecDepth 200000 in
+/-- **Poly1305 finalisation (machine code).** For every placement of the library, the AArch64
+    code of `<Poly1305 as UniversalHash>::finalize` satisfies `polyFinalContract`: from
+    accumulator limbs within the representation bounds it writes the 16-byte tag
+    `(acc mod (2^130 - 5) + s) mod 2^128`. No hooks. -/
+theorem poly1305_finalize_refines (mpl : MultiPlacement) (hpl : chachapolyLib.Placeable mpl) :
+    subroutine_ok (chachapolyLib.blockProgram mpl 8)
+      (chachapolyLib.fnAddr mpl polyFinalizeSym)
+      (chachapolyLib.withCodeLoaded mpl polyFinalContract) := by
+  have hfn : chachapolyLib.fnAddr mpl polyFinalizeSym = mpl.base 8 := by
+    have h : lookupBlockSym polyFinalizeSym chachapolyLib.blocks = some (8, 0) := by
+      decide +kernel
+    simp [MultiPlacedLib.fnAddr, h]
+  rw [hfn]
+  exact @Proofs.polyFinalContract_ok ⟨mpl, hpl⟩
+
 /-- **Round trip (model).** RFC 8439 decryption inverts encryption on all inputs. -/
 theorem aead_roundtrip (key nonce aad pt : Bytes) :
     aeadDecrypt key nonce aad (aeadEncrypt key nonce aad pt).1 (aeadEncrypt key nonce aad pt).2 =
