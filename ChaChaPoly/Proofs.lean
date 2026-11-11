@@ -23,3 +23,4 @@ public import ChaChaPoly.Proofs.ApplyKeystream9
 public import ChaChaPoly.Proofs.ApplyKeystream10
 public import ChaChaPoly.Proofs.MuslBlocks
 public import ChaChaPoly.Proofs.EncryptMac
+public import ChaChaPoly.Proofs.EncryptBytes
