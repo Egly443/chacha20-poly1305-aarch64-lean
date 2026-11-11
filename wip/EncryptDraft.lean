@@ -511,6 +511,198 @@ theorem pn_blk_ok [CpPlacement] :
       (chachapolyLib.withCodeLoaded cpMpl polyNewContract) := polyNewContract_ok
 
 
+theorem sepwp_pure_out {prog : Program} {t : BitVec 64} {s : Arm64.State} {P F : SepProp} {φ : Prop}
+    {post : Arm64.State → SepProp → Prop} {oom : Arm64.State → SepProp}
+    (hf : P = ⌜φ⌝ ∗ F) (h : φ → SepWP prog t s F post oom) : SepWP prog t s P post oom := by
+  subst hf; exact SepWP.pure_elim h
+
+theorem cd_blk_ok [CpPlacement] :
+    subroutine_ok (chachapolyLib.blockProgram cpMpl 1) cpPl1.base
+      (chachapolyLib.withCodeLoaded cpMpl cipherDropContract) := cipherDrop_ok
+
+theorem spill128_fold (b : BitVec 64) (v0 : BitVec 8) (v2 : BitVec 8) (v4 : BitVec 8) (v6 : BitVec 8) (v8 : BitVec 8) (v10 : BitVec 8) (v12 : BitVec 8) (v14 : BitVec 8) (v16 : BitVec 8) (v18 : BitVec 8) (v20 : BitVec 8) (v22 : BitVec 8) (v24 : BitVec 8) (v26 : BitVec 8) (v28 : BitVec 8) (v30 : BitVec 8) (v32 : BitVec 8) (v34 : BitVec 8) (v36 : BitVec 8) (v38 : BitVec 8) (v40 : BitVec 8) (v42 : BitVec 8) (v44 : BitVec 8) (v46 : BitVec 8) (v48 : BitVec 8) (v50 : BitVec 8) (v52 : BitVec 8) (v54 : BitVec 8) (v56 : BitVec 8) (v58 : BitVec 8) (v60 : BitVec 8) (v62 : BitVec 8) :
+    ((b ↦₈ v0) ∗
+      memRegion (b + 1#64) 3 ∗
+      ((b + 4#64) ↦₈ v2) ∗
+      memRegion (b + 5#64) 3 ∗
+      ((b + 8#64) ↦₈ v4) ∗
+      memRegion (b + 9#64) 3 ∗
+      ((b + 12#64) ↦₈ v6) ∗
+      memRegion (b + 13#64) 3 ∗
+      ((b + 16#64) ↦₈ v8) ∗
+      memRegion (b + 17#64) 3 ∗
+      ((b + 20#64) ↦₈ v10) ∗
+      memRegion (b + 21#64) 3 ∗
+      ((b + 24#64) ↦₈ v12) ∗
+      memRegion (b + 25#64) 3 ∗
+      ((b + 28#64) ↦₈ v14) ∗
+      memRegion (b + 29#64) 3 ∗
+      ((b + 32#64) ↦₈ v16) ∗
+      memRegion (b + 33#64) 3 ∗
+      ((b + 36#64) ↦₈ v18) ∗
+      memRegion (b + 37#64) 3 ∗
+      ((b + 40#64) ↦₈ v20) ∗
+      memRegion (b + 41#64) 3 ∗
+      ((b + 44#64) ↦₈ v22) ∗
+      memRegion (b + 45#64) 3 ∗
+      ((b + 48#64) ↦₈ v24) ∗
+      memRegion (b + 49#64) 3 ∗
+      ((b + 52#64) ↦₈ v26) ∗
+      memRegion (b + 53#64) 3 ∗
+      ((b + 56#64) ↦₈ v28) ∗
+      memRegion (b + 57#64) 3 ∗
+      ((b + 60#64) ↦₈ v30) ∗
+      memRegion (b + 61#64) 3 ∗
+      ((b + 64#64) ↦₈ v32) ∗
+      memRegion (b + 65#64) 3 ∗
+      ((b + 68#64) ↦₈ v34) ∗
+      memRegion (b + 69#64) 3 ∗
+      ((b + 72#64) ↦₈ v36) ∗
+      memRegion (b + 73#64) 3 ∗
+      ((b + 76#64) ↦₈ v38) ∗
+      memRegion (b + 77#64) 3 ∗
+      ((b + 80#64) ↦₈ v40) ∗
+      memRegion (b + 81#64) 3 ∗
+      ((b + 84#64) ↦₈ v42) ∗
+      memRegion (b + 85#64) 3 ∗
+      ((b + 88#64) ↦₈ v44) ∗
+      memRegion (b + 89#64) 3 ∗
+      ((b + 92#64) ↦₈ v46) ∗
+      memRegion (b + 93#64) 3 ∗
+      ((b + 96#64) ↦₈ v48) ∗
+      memRegion (b + 97#64) 3 ∗
+      ((b + 100#64) ↦₈ v50) ∗
+      memRegion (b + 101#64) 3 ∗
+      ((b + 104#64) ↦₈ v52) ∗
+      memRegion (b + 105#64) 3 ∗
+      ((b + 108#64) ↦₈ v54) ∗
+      memRegion (b + 109#64) 3 ∗
+      ((b + 112#64) ↦₈ v56) ∗
+      memRegion (b + 113#64) 3 ∗
+      ((b + 116#64) ↦₈ v58) ∗
+      memRegion (b + 117#64) 3 ∗
+      ((b + 120#64) ↦₈ v60) ∗
+      memRegion (b + 121#64) 3 ∗
+      ((b + 124#64) ↦₈ v62) ∗
+      memRegion (b + 125#64) 3) ⊢ memRegion b 128 := by
+  rw [memRegion_partition b 128 [1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29, 32, 33, 36, 37, 40, 41, 44, 45, 48, 49, 52, 53, 56, 57, 60, 61, 64, 65, 68, 69, 72, 73, 76, 77, 80, 81, 84, 85, 88, 89, 92, 93, 96, 97, 100, 101, 104, 105, 108, 109, 112, 113, 116, 117, 120, 121, 124, 125]]
+  repeat' (first
+    | exact Entails.refl _
+    | exact pointsTo64_entails_memRegion _ _
+    | exact pointsTo32_entails_memRegion _ _
+    | exact pointsTo8_entails_memRegion _ _
+    | refine sepConj_mono ?_ ?_)
+
+
+theorem cells3_fold (b : BitVec 64) (v0 : BitVec 8) (v1 : BitVec 8) (v2 : BitVec 8) :
+    ((b ↦₈ v0) ∗
+      ((b + 1#64) ↦₈ v1) ∗
+      ((b + 2#64) ↦₈ v2)) ⊢ memRegion b 3 := by
+  rw [memRegion_partition b 3 [1, 2]]
+  repeat' (first
+    | exact Entails.refl _
+    | exact pointsTo64_entails_memRegion _ _
+    | exact pointsTo32_entails_memRegion _ _
+    | exact pointsTo8_entails_memRegion _ _
+    | refine sepConj_mono ?_ ?_)
+
+
+theorem limbs20_fold (b : BitVec 64) (v0 : BitVec 32) (v1 : BitVec 32) (v2 : BitVec 32) (v3 : BitVec 32) (v4 : BitVec 32) :
+    ((b ↦₃₂ v0) ∗
+      ((b + 4#64) ↦₃₂ v1) ∗
+      ((b + 8#64) ↦₃₂ v2) ∗
+      ((b + 12#64) ↦₃₂ v3) ∗
+      ((b + 16#64) ↦₃₂ v4)) ⊢ memRegion b 20 := by
+  rw [memRegion_partition b 20 [4, 8, 12, 16]]
+  repeat' (first
+    | exact Entails.refl _
+    | exact pointsTo64_entails_memRegion _ _
+    | exact pointsTo32_entails_memRegion _ _
+    | exact pointsTo8_entails_memRegion _ _
+    | refine sepConj_mono ?_ ?_)
+
+
+theorem carea64_fold (b : BitVec 64) :
+    (memRegion b 16 ∗
+      memRegion (b + 16#64) 20 ∗
+      memRegion (b + 36#64) 20 ∗
+      memRegion (b + 56#64) 8) ⊢ memRegion b 64 := by
+  rw [memRegion_partition b 64 [16, 36, 56]]
+  repeat' (first
+    | exact Entails.refl _
+    | exact pointsTo64_entails_memRegion _ _
+    | exact pointsTo32_entails_memRegion _ _
+    | exact pointsTo8_entails_memRegion _ _
+    | refine sepConj_mono ?_ ?_)
+
+
+theorem pos16_fold (b : BitVec 64) (v0 : BitVec 8) :
+    ((b ↦₈ v0) ∗
+      memRegion (b + 1#64) 15) ⊢ memRegion b 16 := by
+  rw [memRegion_partition b 16 [1]]
+  repeat' (first
+    | exact Entails.refl _
+    | exact pointsTo64_entails_memRegion _ _
+    | exact pointsTo32_entails_memRegion _ _
+    | exact pointsTo8_entails_memRegion _ _
+    | refine sepConj_mono ?_ ?_)
+
+
+theorem mac32_fold (b : BitVec 64) (v0 : BitVec 8) :
+    ((b ↦₈ v0) ∗
+      memRegion (b + 1#64) 16 ∗
+      memRegion (b + 17#64) 15) ⊢ memRegion b 32 := by
+  rw [memRegion_partition b 32 [1, 17]]
+  repeat' (first
+    | exact Entails.refl _
+    | exact pointsTo64_entails_memRegion _ _
+    | exact pointsTo32_entails_memRegion _ _
+    | exact pointsTo8_entails_memRegion _ _
+    | refine sepConj_mono ?_ ?_)
+
+
+theorem encClose_fold (b : BitVec 64) (v1 : BitVec 64) (v2 : BitVec 64) (v3 : BitVec 32) (v13 : BitVec 64) (v14 : BitVec 64) (v15 : BitVec 64) (v16 : BitVec 64) (v17 : BitVec 64) (v18 : BitVec 64) (v19 : BitVec 64) (v20 : BitVec 64) (v21 : BitVec 64) (v22 : BitVec 64) (v23 : BitVec 64) (v24 : BitVec 64) :
+    (memRegion b 560 ∗
+      ((b + 560#64) ↦₆₄ v1) ∗
+      ((b + 568#64) ↦₆₄ v2) ∗
+      ((b + 576#64) ↦₃₂ v3) ∗
+      memRegion (b + 580#64) 128 ∗
+      memRegion (b + 708#64) 56 ∗
+      memRegion (b + 764#64) 129 ∗
+      memRegion (b + 893#64) 3 ∗
+      memRegion (b + 896#64) 64 ∗
+      memRegion (b + 960#64) 64 ∗
+      memRegion (b + 1024#64) 16 ∗
+      memRegion (b + 1040#64) 32 ∗
+      memRegion (b + 1072#64) 16 ∗
+      ((b + 1088#64) ↦₆₄ v13) ∗
+      ((b + 1096#64) ↦₆₄ v14) ∗
+      ((b + 1104#64) ↦₆₄ v15) ∗
+      ((b + 1112#64) ↦₆₄ v16) ∗
+      ((b + 1120#64) ↦₆₄ v17) ∗
+      ((b + 1128#64) ↦₆₄ v18) ∗
+      ((b + 1136#64) ↦₆₄ v19) ∗
+      ((b + 1144#64) ↦₆₄ v20) ∗
+      ((b + 1152#64) ↦₆₄ v21) ∗
+      ((b + 1160#64) ↦₆₄ v22) ∗
+      ((b + 1168#64) ↦₆₄ v23) ∗
+      ((b + 1176#64) ↦₆₄ v24)) ⊢ memRegion b 1184 := by
+  rw [memRegion_partition b 1184 [560, 568, 576, 580, 708, 764, 893, 896, 960, 1024, 1040, 1072, 1088, 1096, 1104, 1112, 1120, 1128, 1136, 1144, 1152, 1160, 1168, 1176]]
+  repeat' (first
+    | exact Entails.refl _
+    | exact pointsTo64_entails_memRegion _ _
+    | exact pointsTo32_entails_memRegion _ _
+    | exact pointsTo8_entails_memRegion _ _
+    | refine sepConj_mono ?_ ?_)
+
+
+
+theorem words4_region (p : BitVec 64) (a b c d : BitVec 32) : words4At p a b c d ⊢ memRegion p 16 := by
+  rw [words4_bytes]; exact pointsToBytes_entails_memRegion p _
+
+theorem slice_region (p : BitVec 64) (X : Bytes) (n : Nat) (h : X.length = n) : (p ↦ₛ X) ⊢ memRegion p n :=
+  h ▸ pointsToBytes_entails_memRegion p X
+
 def sigmaSym : String := "chachapoly_verified:.rodata.cst16+0x0"
 
 set_option maxRecDepth 400000 in
@@ -818,5 +1010,83 @@ theorem encrypt_draft [CpPlacement] :
             simp only [sepConj_assoc]
             sep_frame
           · intro sf7 hpcf7 hrunf7 hspf7 hcsf7
-            trace_state
-            sorry
+            obtain ⟨j19, j20, j21, j22, j23, j24, j25, j26, j27, j28, j29, jv⟩ := hcsf7
+            simp only [wp_norm, arm64_norm] at j19 j20 j21 j22 j23 j24 j25 j26 j27 j28 j29 jv hspf7
+            simp only [MultiPlacedLib.withCodeLoaded, polyFinalContract]
+            refine SepWP.done (by simp [wp_norm, arm64_norm, hpcf7]) hrunf7 ?_
+            intro hcl10
+            show SepWP cpProg6r _ _ _ _ _
+            simp only [sepExists_sepConj_left, sepExists_sepConj_right, sepConj_assoc]
+            refine SepWP.exists_elim fun tg => ?_
+            refine sepwp_pure_out (by sep_focus) fun htg => ?_
+            refine MultiPlacedLib.seq_codeLoaded (mid := cpPl6.base + 0x41c#64) hcl10 ?_
+            refine Proofs.SepWP.foldPart (cipher129_entails (s0.sp - 420#64) _ _ _) (by sep_focus) ?_
+            have hρd : cpPl6.ρ cipherDropSym = cpPl1.base := by
+              have h : Obj.lookupBlockSym cipherDropSym chachapolyLib.blocks = some (1, 0) := by decide +kernel
+              simp [cpPl6, cpPl1, MultiPlacedLib.blockPlacement, MultiPlacedLib.resolve, h]
+            simp only [cipherDropSym] at hρd
+            wp_steps 2
+            rw [show cpPl6.base + 1048#64 + (cpPl1.base - cpPl6.base - 1048#64) = cpPl1.base by bv_omega]
+            show SepWP (chachapolyLib.blockProgram cpMpl 6) _ _ _ _ _
+            refine MultiPlacedLib.sepWP_call_block (j := 1) (by decide) cd_blk_ok
+              (x := s0.sp - 476#64) (ret_pc := cpPl6.base + 1052#64) (F := ?F6)
+              (by simpa [wp_norm, arm64_norm] using hcl10) (by simp [wp_norm, arm64_norm])
+              (by simp [wp_norm, arm64_norm, hrunf7])
+              (by simp [wp_norm, arm64_norm, State.spAligned, hspf7, hspf6, g1, hspf4, k1s, hspf2]; simpa using hsp_align)
+              (by simp [wp_norm, arm64_norm]) ?_
+              (fun _ _ _ hp => not_satisfies_false_sepConj hp) (fun _ _ _ _ he => not_satisfies_false_sepConj he) ?_
+            rotate_left
+            · intro R hm
+              simp only [MultiPlacedLib.withCodeLoaded, cipherDropContract]
+              simp only [wp_norm, arm64_norm, sepConj_assoc, satisfies_pure_sepConj] at hm hcl10 ⊢
+              refine ⟨hcl10, ?_⟩
+              simp only [← sepConj_assoc] at hm ⊢
+              refine Satisfies.mono (sepConj_mono_left ?_) hm
+              simp only [sepConj_assoc]
+              sep_frame
+            · intro sf8 hpcf8 hrunf8 hspf8 hcsf8
+              obtain ⟨o19, o20, o21, o22, o23, o24, o25, o26, o27, o28, o29, ov⟩ := hcsf8
+              simp only [wp_norm, arm64_norm] at o19 o20 o21 o22 o23 o24 o25 o26 o27 o28 o29 ov hspf8
+              simp only [MultiPlacedLib.withCodeLoaded, cipherDropContract]
+              refine SepWP.done (by simp [wp_norm, arm64_norm, hpcf8]) hrunf8 ?_
+              intro hcl11
+              show SepWP cpProg6r _ _ _ _ _
+              rw [words4_bytes (s0.sp - 143#64), words4_natLe]
+              have htl : (natLe 16 (words4Val tg.1 tg.2.1 tg.2.2.1 tg.2.2.2)).length = 16 := by simp [natLe]
+              generalize hT : natLe 16 (words4Val tg.1 tg.2.1 tg.2.2.1 tg.2.2.2) = T at htl ⊢
+              wp_steps
+              have htag := enc_tag k n a msg mk pw.1 pw.2.1 pw.2.2.1 pw.2.2.2 tg.1 tg.2.1 tg.2.2.1 tg.2.2.2
+                l3 hmkeq.symm hpw hl3 htg
+              rw [hT] at htag
+              have htl11 : t.length = 16 := by assumption
+              rw [pair_copy t T 0 8 rfl htl11 (by omega),
+                show ProofLib.ByteSlice.slice T 0 16 = T by
+                  simp [ProofLib.ByteSlice.slice, List.take_of_length_le, htl],
+                show (aeadEncrypt k n a msg).1 = streamXor (initState k 1 n) msg by
+                  simp [aeadEncrypt, chacha20Encrypt_eq], ← htag]
+              refine Proofs.SepWP.foldPart (spill128_fold (s0.sp - 604#64) 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8 0#8) (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (slice_region (s0.sp - 476#64) _ 56 (polyBytes_length _ _ _ _ _))
+                (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (cells3_fold (s0.sp - 291#64) _ _ _) (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (words4_region (s0.sp - 288#64) _ _ _ _) (by sep_focus) ?_
+              unfold limbsAt
+              refine Proofs.SepWP.foldPart (limbs20_fold (s0.sp - 272#64) l3.r0 l3.r1 l3.r2 l3.r3 l3.r4)
+                (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (limbs20_fold (s0.sp - 252#64) l3.h0 l3.h1 l3.h2 l3.h3 l3.h4)
+                (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (slice_region (s0.sp - 232#64) (scr64.drop 56) 8 (by simp [hscl]))
+                (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (carea64_fold (s0.sp - 288#64)) (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (slice_region (s0.sp - 224#64) kb.bytes 64
+                (by simp [Spec.State.bytes, word32Bytes])) (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (slice_region (s0.sp - 159#64) pr 15 hpr) (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (pos16_fold (s0.sp - 160#64) 0#8) (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (slice_region (s0.sp - 143#64) T 16 htl) (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (slice_region (s0.sp - 127#64) (List.replicate 15 0#8) 15 (by simp))
+                (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (mac32_fold (s0.sp - 144#64) 0#8) (by sep_focus) ?_
+              refine Proofs.SepWP.foldPart (encClose_fold (s0.sp - 1184#64) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _)
+                (by sep_focus) ?_
+              wp_done
+
+#print axioms encrypt_draft
