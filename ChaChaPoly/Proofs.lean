@@ -12,3 +12,4 @@ public import ChaChaPoly.Proofs.Poly1305NewMath
 public import ChaChaPoly.Proofs.Poly1305ProcBlock
 public import ChaChaPoly.Proofs.Helpers
 public import ChaChaPoly.Proofs.ApplyKeystream1
+public import ChaChaPoly.Proofs.ApplyKeystream2
