@@ -146,4 +146,42 @@ theorem words4_natLe (t0 t1 t2 t3 : BitVec 32) :
     simp only [BitVec.extractLsb'_toNat, BitVec.toNat_ofNat, Nat.shiftRight_eq_div_pow]
     omega
 
+theorem copy56 (D pB : List (BitVec 8)) (hD : D.length = 64) (hp : pB.length = 56) :
+    ByteSlice.write64 (ByteSlice.write64 (ByteSlice.write64 (ByteSlice.write64 (ByteSlice.write64
+      (ByteSlice.write64 (ByteSlice.write64 D 48 (ByteSlice.readLE pB 48 8)) 0 (ByteSlice.readLE pB 0 8)) 8
+      (ByteSlice.readLE pB 8 8)) 16 (ByteSlice.readLE pB 16 8)) 24 (ByteSlice.readLE pB 24 8)) 32
+      (ByteSlice.readLE pB 32 8)) 40 (ByteSlice.readLE pB 40 8) = pB ++ D.drop 56 := by
+  rw [← ByteSlice.copySet_false D pB]
+  simp (disch := omega) only [ByteSlice.write64_copySet_readLE]
+  apply ByteSlice.ext_getD (by simp; omega)
+  intro i hi
+  simp only [ByteSlice.copySet_length] at hi
+  rw [ByteSlice.getD_copySet]
+  by_cases h56 : i < 56
+  · have hc : ((false || decide (48 ≤ i) && decide (i < 48 + 8) || decide (0 ≤ i) && decide (i < 0 + 8) ||
+        decide (8 ≤ i) && decide (i < 8 + 8) || decide (16 ≤ i) && decide (i < 16 + 8) ||
+        decide (24 ≤ i) && decide (i < 24 + 8) || decide (32 ≤ i) && decide (i < 32 + 8) ||
+        decide (40 ≤ i) && decide (i < 40 + 8)) && decide (i < D.length)) = true := by
+      simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq, Bool.false_eq_true, false_or]
+      omega
+    rw [if_pos hc, List.getD_eq_getElem?_getD, List.getD_eq_getElem?_getD,
+      List.getElem?_append_left (by omega)]
+  · have hc : ((false || decide (48 ≤ i) && decide (i < 48 + 8) || decide (0 ≤ i) && decide (i < 0 + 8) ||
+        decide (8 ≤ i) && decide (i < 8 + 8) || decide (16 ≤ i) && decide (i < 16 + 8) ||
+        decide (24 ≤ i) && decide (i < 24 + 8) || decide (32 ≤ i) && decide (i < 32 + 8) ||
+        decide (40 ≤ i) && decide (i < 40 + 8)) && decide (i < D.length)) = false := by
+      simp only [Bool.or_eq_false_iff, Bool.and_eq_false_iff, decide_eq_false_iff_not, Bool.false_eq_true,
+        true_and, Bool.or_false, Bool.false_or]
+      omega
+    rw [if_neg (by rw [hc]; exact Bool.false_ne_true), List.getD_eq_getElem?_getD, List.getD_eq_getElem?_getD,
+      List.getElem?_append_right (by omega), List.getElem?_drop, hp]
+    rw [ByteSlice.copySet_false, show 56 + (i - 56) = i by omega]
+
+
+theorem zero_chain8 (mk : List (BitVec 8)) (h : mk.length = 32) :
+    ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 (ByteSlice.write8 mk 0 0#8) 1 0#8) 2 0#8) 3 0#8) 4 0#8) 5 0#8) 6 0#8) 7 0#8) 8 0#8) 9 0#8) 10 0#8) 11 0#8) 12 0#8) 13 0#8) 14 0#8) 15 0#8) 16 0#8) 17 0#8) 18 0#8) 19 0#8) 20 0#8) 21 0#8) 22 0#8) 23 0#8) 24 0#8) 25 0#8) 26 0#8) 27 0#8) 28 0#8) 29 0#8) 30 0#8) 31 0#8 = List.replicate 32 0#8 := by
+  rw [← ByteSlice.fillPrefix_zero mk 0#8]
+  simp (disch := omega) only [ByteSlice.write8_fillPrefix]
+  exact ByteSlice.fillPrefix_full h
+
 end ChaChaPoly.Proofs
